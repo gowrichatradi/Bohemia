@@ -27,14 +27,75 @@ const I = {
 
 /* ---------- legs (groups the 19 days into regions) ---------- */
 const LEGS = [
-  {name:'Copenhagen',   sub:'Two days to land',            accent:'var(--dusk)',   from:0},
-  {name:'Lofoten',      sub:'Arctic islands & the light',  accent:'var(--dawn)',   from:2},
-  {name:'The fjords',   sub:'Bergen & the western water',  accent:'var(--fjord)',  from:7},
-  {name:'The Alps',     sub:'Bavaria & the Salzkammergut',  accent:'var(--alpine)', from:12},
-  {name:'Bohemia',      sub:'Prague, Krumlov & Dresden',    accent:'var(--gold)',   from:14},
-  {name:'North & home', sub:'Copenhagen, then home',        accent:'var(--dusk)',   from:18},
+  {name:'Copenhagen',   sub:'Two days to land',            accent:'var(--dusk)',   short:'Arrive',  scene:'harbour', from:0},
+  {name:'Lofoten',      sub:'Arctic islands & the light',  accent:'var(--dawn)',   short:'Lofoten', scene:'lofoten', from:2},
+  {name:'The fjords',   sub:'Bergen & the western water',  accent:'var(--fjord)',  short:'Fjords',  scene:'fjord',   from:7},
+  {name:'The Alps',     sub:'Bavaria & the Salzkammergut',  accent:'var(--alpine)', short:'Alps',    scene:'alps',    from:12},
+  {name:'Bohemia',      sub:'Prague, Krumlov & Dresden',    accent:'var(--gold)',   short:'Bohemia', scene:'bohemia', from:14},
+  {name:'North & home', sub:'Copenhagen, then home',        accent:'var(--dusk)',   short:'Home',    scene:'harbour', from:18},
 ];
 function legOf(i){ let L = LEGS[0]; for(const l of LEGS){ if(i >= l.from) L = l; } return L; }
+function currentLegIndex(){ const i = currentIndex(); return i>=0 ? LEGS.indexOf(legOf(i)) : -1; }
+
+/* ---------- region scenery: flowing topographic contour lines, tinted with --accent ---------- */
+/* each region varies by amplitude / wavelength / density so the terrain "feels" different */
+const SCENE_PARAMS = {
+  harbour:{amp:5,  freq:98, lines:7},   // calm, low
+  lofoten:{amp:13, freq:46, lines:6},   // dramatic, jagged
+  fjord:  {amp:8,  freq:66, lines:6},   // deep, layered
+  alps:   {amp:11, freq:56, lines:6},   // high, rolling
+  bohemia:{amp:6,  freq:82, lines:7},   // gentle, dense
+};
+function sceneSVG(key, cls){
+  const p = SCENE_PARAMS[key] || SCENE_PARAMS.harbour;
+  const W=400, H=120, base=14, sp=(H-base)/p.lines;
+  let paths='';
+  for(let i=0;i<p.lines;i++){
+    const ly = base + i*sp, ph = i*0.9, amp = p.amp*(0.4 + i/p.lines);   // calmer up top, stronger below
+    const pts=[];
+    for(let x=-10;x<=W+10;x+=14) pts.push([x, +(ly + Math.sin(x/p.freq + ph)*amp).toFixed(1)]);
+    paths += `<path d="${smoothPath(pts)}" fill="none" stroke="currentColor" stroke-width="1.1" opacity="${(0.1+i*0.03).toFixed(3)}"/>`;
+  }
+  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>`;
+}
+
+/* smooth path through points, horizontal-tangent cubics */
+function smoothPath(pts){
+  if(!pts.length) return '';
+  let d = 'M'+pts[0][0]+' '+pts[0][1];
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1], b=pts[i], cx=(a[0]+b[0])/2;
+    d += ' C'+cx+' '+a[1]+' '+cx+' '+b[1]+' '+b[0]+' '+b[1];
+  }
+  return d;
+}
+
+/* ---------- the journey map ---------- */
+function journeyMap(){
+  const here = currentLegIndex();
+  const X=[26,90,154,218,282,346], Y=[86,40,54,74,100,86];
+  const pts = LEGS.map((l,i)=>[X[i],Y[i]]);
+  const bright = here>0 ? smoothPath(pts.slice(0,here+1)) : '';
+  let g = '';
+  LEGS.forEach((l,i)=>{
+    const st = here<0 ? (i===0?'next':'future') : (i<here?'done':i===here?'active':'future');
+    const big = st==='active'||st==='next';
+    g += `<g class="jn ${st}" style="--a:${l.accent}" onclick="openDay(${l.from})">`
+       + (big?`<circle class="ring" cx="${X[i]}" cy="${Y[i]}" r="7"/>`:'')
+       + `<circle cx="${X[i]}" cy="${Y[i]}" r="${big?6.5:5}"/>`
+       + `<text class="jl" x="${X[i]}" y="128">${esc(l.short)}</text>`
+       + `<text class="jd" x="${X[i]}" y="139">${dateShort(DATA.days[l.from])}</text></g>`;
+  });
+  const cap = here<0 ? 'The whole arc — Copenhagen up to the Arctic, then the long way south and home.'
+                     : 'You’re on the '+esc(legOf(currentIndex()).name)+' leg.';
+  return `<div class="card jmap fade"><div class="lab">${I.rail}The journey</div>
+    <svg viewBox="0 0 372 150" class="jsvg" aria-hidden="true">
+      <path class="jpath" d="${smoothPath(pts)}"/>
+      ${bright?`<path class="jpath on" d="${bright}"/>`:''}
+      ${g}
+    </svg>
+    <div class="jcap">${cap}</div></div>`;
+}
 
 /* ---------- phases (groups a day's parts by time of day) ---------- */
 const PHASE_ORDER = ['dawn','day','stops','kid','evening','notes'];
@@ -53,7 +114,7 @@ const KIND_LABEL = {mkt:'Provisions', cafe:'Coffee & a bite', also:'Also', eve:'
 const KIND_ICON  = {mkt:I.shop, cafe:I.cup};
 
 /* ---------- state ---------- */
-const S = { view:'today', day:null, seg:0, q:'' };
+const S = { view:'today', day:null, seg:0, bk:0, q:'' };
 const TAB_INDEX = {today:0, days:1, book:2, info:3};
 
 /* ---------- helpers ---------- */
@@ -148,6 +209,7 @@ function heroFor(d, idx){
       ${d.set?`<span class="chip set">${I.set}${esc(d.set)}</span>`:''}
     </div>
     <div class="stay">${I.bed}<span>Tonight · <b>${esc(d.stay)}</b></span></div>
+    ${sceneSVG(leg.scene,'scene')}
   </div>`;
 }
 
@@ -169,7 +231,9 @@ function vToday(){
         <span class="chip">${DATA.days.length} days</span>
         <span class="chip">5 countries</span>
         <span class="chip">4 flights</span>
-      </div></div>`;
+      </div>
+      ${sceneSVG(leg.scene,'scene')}</div>`;
+    h += journeyMap();
     h += `<div class="card fade"><div class="lab">${I.chev}First up</div>`
        + `<div class="ti" style="font-size:16px;font-weight:600">${esc(DATA.days[0].title)}</div>`
        + `<div class="muted" style="margin-top:4px;font-size:14px">${esc(DATA.days[0].date)} · ${esc(DATA.days[0].stay)}</div>`
@@ -178,6 +242,7 @@ function vToday(){
   } else {
     const d = DATA.days[idx];
     h += heroFor(d, idx);
+    h += journeyMap();
     h += timeline(d);
     const nx = DATA.days[idx+1];
     if(nx) h += `<div class="card fade" style="margin-top:14px"><div class="lab">Tomorrow</div>
@@ -208,21 +273,21 @@ function vDays(){
   if(!rows.length) return `<div class="empty">Nothing matches “${esc(S.q)}”.</div>`;
 
   let h = `<div class="sect fade"><h2>Day by day</h2>
-    <p class="intro">${rows.length} of ${DATA.days.length} days${q?' matching':', in five legs'}. Tap for the full day.</p></div>`;
+    <p class="intro">${rows.length} of ${DATA.days.length} days${q?' matching':', in six legs'}. Tap for the full day.</p></div>`;
 
   let curLeg = null, si = 0;
   rows.forEach(({d,i}, r)=>{
     const leg = legOf(i);
     if(leg !== curLeg){
       if(curLeg) h += `</div>`;              // close the previous leg
-      curLeg = leg;
+      curLeg = leg; si = 0;                  // restart the stagger per leg
+
       const members = rows.filter(x=>legOf(x.i)===leg);
       const range = members.length ? dateShort(members[0].d)+'–'+dateShort(members[members.length-1].d) : '';
       h += `<div class="leg fade" style="--accent:${leg.accent}">
-        <div class="leghd"><span class="bar"></span>
-          <span class="nm">${esc(leg.name)}</span>
-          <span class="sb">${esc(leg.sub)}</span>
-          <span class="rg">${range}</span></div>`;
+        <div class="legband">${sceneSVG(leg.scene,'scene')}
+          <div class="legband-t"><span class="nm">${esc(leg.name)}</span><span class="rg">${range}</span></div>
+          <div class="legband-s">${esc(leg.sub)}</div></div>`;
     }
     const cls = i===idx ? 'now' : (dayDate(d) < today() ? 'past' : '');
     const dp = d.date.split(' ');
@@ -242,32 +307,62 @@ function vDays(){
 function vDay(i){
   const d = DATA.days[i];
   const prev = DATA.days[i-1], next = DATA.days[i+1];
-  let h = `<button class="back" onclick="S.day=null;render()">${I.chev}All days</button>`
+  let h = `<button class="back" onclick="backToDays()">${I.chev}All days</button>`
     + heroFor(d, i) + timeline(d);
   h += `<div class="daynav">`
-    + (prev?`<button onclick="openDay(${i-1})"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
-    + (next?`<button class="nx" onclick="openDay(${i+1})"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)
+    + (prev?`<button onclick="navigateDay(-1)"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
+    + (next?`<button class="nx" onclick="navigateDay(1)"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)
     + `</div>`;
   return h;
 }
 
+const TAG_CLASS = {Booked:'t-ok', Open:'t-open', Act:'t-act', Cancel:'t-act', Seats:'t-open'};
+function bookingRows(rows){
+  return rows.map(r=>{
+    const tg = TAG_CLASS[r.tag] || 't-act';
+    return `<div class="bk"><div class="w">${esc(r.when||'').split('\n').join('<br>')}</div>
+      <div class="b"><div class="n">${esc(r.name)}</div>
+      ${r.detail?`<div class="d">${fmt(r.detail)}</div>`:''}
+      ${r.ref?`<button class="ref" onclick="copyRef('${esc(r.ref.split(' ')[0])}')">${I.copy}${esc(r.ref)}</button>`:''}
+      </div>${r.tag?`<span class="tag ${tg}">${esc(r.tag)}</span>`:''}</div>`;
+  }).join('');
+}
+function bookGroup(head){ return DATA.bookings.find(g => g.head===head || (head instanceof RegExp && head.test(g.head))); }
+
 function vBook(){
   const q = S.q.toLowerCase();
-  let h = `<div class="sect fade"><h2>Bookings</h2>
-    <p class="intro">Tap a reference to copy it.</p>`;
-  const groups = [{head:'Needs action', rows:DATA.actions}].concat(DATA.bookings);
-  groups.forEach(g=>{
-    const rows = g.rows.filter(r=>!q || (r.name+r.detail+r.ref).toLowerCase().includes(q));
-    if(!rows.length) return;
-    h += `<div class="grph">${esc(g.head)}</div>`;
-    rows.forEach(r=>{
-      const tg = r.tag==='Booked'?'t-ok':r.tag==='Open'?'t-open':'t-act';
-      h += `<div class="bk"><div class="w">${esc(r.when).split('\n').join('<br>')}</div>
-        <div class="b"><div class="n">${esc(r.name)}</div>
-        ${r.detail?`<div class="d">${fmt(r.detail)}</div>`:''}
-        ${r.ref?`<button class="ref" onclick="copyRef('${esc(r.ref.split(' ')[0])}')">${I.copy}${esc(r.ref)}</button>`:''}
-        </div>${r.tag?`<span class="tag ${tg}">${esc(r.tag)}</span>`:''}</div>`;
+  let h = `<div class="sect fade"><h2>Bookings</h2>`;
+
+  // searching: flatten across everything so a reference is found from any tab
+  if(q){
+    h += `<p class="intro">Matches for “${esc(S.q)}”.</p>`;
+    const all = [{head:'Needs action', rows:DATA.actions}].concat(DATA.bookings);
+    let any = false;
+    all.forEach(g=>{
+      const rows = g.rows.filter(r=>((r.name||'')+(r.detail||'')+(r.ref||'')).toLowerCase().includes(q));
+      if(!rows.length) return;
+      any = true;
+      h += `<div class="grph">${esc(g.head)}</div>` + bookingRows(rows);
     });
+    if(!any) h += `<div class="empty">Nothing matches “${esc(S.q)}”.</div>`;
+    return h + '</div>';
+  }
+
+  // tabbed view
+  const TABS = [
+    {name:'To do',   groups:[{head:'Needs action', rows:DATA.actions}]},
+    {name:'Flights', groups:[bookGroup('Flights'), bookGroup('Rail')].filter(Boolean)},
+    {name:'Cars',    groups:[bookGroup(/^Cars/)].filter(Boolean)},
+    {name:'Stays',   groups:[bookGroup('Where you sleep')].filter(Boolean)},
+  ];
+  const bk = Math.min(S.bk||0, TABS.length-1);
+  h += `<div class="seg"><div class="thumb" style="--n:${bk};width:calc((100% - 6px)/${TABS.length})"></div>`
+     + TABS.map((t,i)=>`<button class="${bk===i?'on':''}" onclick="S.bk=${i};render()">${t.name}</button>`).join('')
+     + `</div><p class="intro">Tap a reference to copy it.</p>`;
+
+  TABS[bk].groups.forEach(g=>{
+    if(TABS[bk].groups.length>1) h += `<div class="grph">${esc(g.head)}</div>`;  // sub-headers only when >1 group
+    h += bookingRows(g.rows);
   });
   return h + '</div>';
 }
@@ -310,8 +405,16 @@ function listHTML(sec){
   return h + '</ul>';
 }
 
-/* ---------- actions ---------- */
-function openDay(i){ S.day=i; S.view='days'; setTab('days'); render(); window.scrollTo(0,0); }
+/* ---------- actions & motion ---------- */
+let nextAnim = 'anim-pop';                       // transition to play on next render
+function openDay(i){ nextAnim='anim-l'; S.day=i; S.view='days'; setTab('days'); render(); window.scrollTo(0,0); }
+function navigateDay(delta){
+  const t = S.day + delta;
+  if(t<0 || t>=DATA.days.length) return;
+  nextAnim = delta>0 ? 'anim-l' : 'anim-r';
+  S.day = t; render(); window.scrollTo(0,0);
+}
+function backToDays(){ nextAnim='anim-r'; S.day=null; render(); window.scrollTo(0,0); }
 function copyRef(t){
   navigator.clipboard?.writeText(t).then(()=>toast('Copied '+t)).catch(()=>toast(t));
 }
@@ -327,6 +430,7 @@ function render(){
   else if(S.view==='book') h=vBook();
   else h=vInfo();
   V.innerHTML=h;
+  V.classList.remove('anim-l','anim-r','anim-pop'); void V.offsetWidth; V.classList.add(nextAnim); nextAnim='anim-pop';
   const idx=currentIndex();
   $('tSub').textContent = idx>=0 ? DATA.days[idx].date+' · day '+(idx+1)+' of '+DATA.days.length
     : (daysUntil()>0 ? daysUntil()+' days to go' : '28 Sep – 18 Oct 2026');
@@ -343,6 +447,20 @@ $('btnSearch').onclick=()=>{
   if(!showing) s.focus(); else { S.q=''; s.value=''; render(); }
 };
 $('srch').oninput=e=>{ S.q=e.target.value; S.day=null; if(S.view==='today'){S.view='days';setTab('days');} render(); };
+
+/* ---------- swipe between days ---------- */
+let tsx=0, tsy=0, tst=0;
+addEventListener('touchstart', e=>{
+  if(e.touches.length!==1) return;
+  const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY; tst=Date.now();
+}, {passive:true});
+addEventListener('touchend', e=>{
+  if(!(S.view==='days' && S.day!=null)) return;
+  const t=e.changedTouches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+  if(Date.now()-tst>600) return;                       // too slow to be a flick
+  if(Math.abs(dx)<55 || Math.abs(dx)<Math.abs(dy)*1.7) return;  // not a clean horizontal swipe
+  navigateDay(dx<0 ? 1 : -1);
+}, {passive:true});
 
 render();
 setInterval(()=>{ if(S.view==='today'&&S.day==null) render(); }, 60000);
