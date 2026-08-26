@@ -1,4 +1,4 @@
-const CACHE = 'arctic-alpine-v3';
+const CACHE = 'arctic-alpine-v4';
 const ASSETS = ['./','./index.html','./app.js','./data.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', e => {

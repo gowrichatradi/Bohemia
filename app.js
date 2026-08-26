@@ -21,7 +21,8 @@ const I = {
   tip:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg>',
   copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>',
   chev:'<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
-  bed:'<svg viewBox="0 0 24 24"><path d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 14h18M3 18v2M21 18v2M6 10V8a1 1 0 011-1h3a1 1 0 011 1v2"/></svg>'
+  bed:'<svg viewBox="0 0 24 24"><path d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 14h18M3 18v2M21 18v2M6 10V8a1 1 0 011-1h3a1 1 0 011 1v2"/></svg>',
+  kite:'<svg viewBox="0 0 24 24"><path d="M12 3.4c2.8 0 4.7 2.2 4.7 5 0 3.4-3 6.2-4.7 6.8-1.7-.6-4.7-3.4-4.7-6.8 0-2.8 1.9-5 4.7-5zM12 15.2v2.4M10.7 21c.2-1.5 2.4-1.5 2.6 0"/></svg>'
 };
 
 /* ---------- legs (groups the 19 days into regions) ---------- */
@@ -35,16 +36,17 @@ const LEGS = [
 function legOf(i){ let L = LEGS[0]; for(const l of LEGS){ if(i >= l.from) L = l; } return L; }
 
 /* ---------- phases (groups a day's parts by time of day) ---------- */
-const PHASE_ORDER = ['dawn','day','stops','evening','notes'];
+const PHASE_ORDER = ['dawn','day','stops','kid','evening','notes'];
 const PHASE = {
-  dawn:    {name:'First light',   ic:I.rise, pc:'var(--dawn)'},
-  day:     {name:'The day',       ic:I.sun,  pc:'var(--fjord)'},
-  stops:   {name:'Along the way', ic:I.cup,  pc:'var(--gold)'},
-  evening: {name:'Evening',       ic:I.set,  pc:'var(--dusk)'},
-  notes:   {name:'Good to know',  ic:I.tip,  pc:'var(--ink2)'},
+  dawn:    {name:'First light',      ic:I.rise, pc:'var(--dawn)'},
+  day:     {name:'The day',          ic:I.sun,  pc:'var(--fjord)'},
+  stops:   {name:'Along the way',    ic:I.cup,  pc:'var(--gold)'},
+  kid:     {name:'For the little one',ic:I.kite, pc:'var(--kid)'},
+  evening: {name:'Evening',          ic:I.set,  pc:'var(--dusk)'},
+  notes:   {name:'Good to know',     ic:I.tip,  pc:'var(--ink2)'},
 };
 const KIND2PHASE = {dawn:'dawn', main:'day', aft:'day', cafe:'stops', mkt:'stops',
-                    dusk:'evening', eve:'evening', also:'evening', tip:'notes', warn:'notes'};
+                    kid:'kid', dusk:'evening', eve:'evening', also:'evening', tip:'notes', warn:'notes'};
 /* default sub-labels for parts that ship without one */
 const KIND_LABEL = {mkt:'Provisions', cafe:'Coffee & a bite', also:'Also', eve:'Evening'};
 const KIND_ICON  = {mkt:I.shop, cafe:I.cup};
@@ -92,13 +94,14 @@ function groupParts(parts){
   return g;
 }
 function renderPart(p){
-  const inStops = KIND2PHASE[p.k] === 'stops';
-  const isNote  = KIND2PHASE[p.k] === 'notes';
+  const ph      = KIND2PHASE[p.k];
+  const soft    = ph === 'stops' || ph === 'kid';
+  const isNote  = ph === 'notes';
   const label   = p.l || KIND_LABEL[p.k] || '';
   const icon    = KIND_ICON[p.k] || '';
   let cls = 'blk';
-  if(inStops) cls += ' soft';
-  if(isNote)  cls += ' note' + (p.k==='warn' ? ' warn' : '');
+  if(soft)   cls += ' soft';
+  if(isNote) cls += ' note' + (p.k==='warn' ? ' warn' : '');
 
   let h = `<div class="${cls}">`;
   if(label || icon) h += `<div class="l">${icon}${label?`<span>${esc(label)}</span>`:''}</div>`;
