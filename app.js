@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const V = $('view');
 
-const TRIP_START = '2026-09-30';
+const TRIP_START = '2026-09-28';
 const TRIP_END   = '2026-10-18';
 
 /* ---------- icons ---------- */
@@ -27,11 +27,12 @@ const I = {
 
 /* ---------- legs (groups the 19 days into regions) ---------- */
 const LEGS = [
-  {name:'Lofoten',      sub:'Arctic islands & the light',  accent:'var(--dawn)',   from:0},
-  {name:'The fjords',   sub:'Bergen & the western water',  accent:'var(--fjord)',  from:5},
-  {name:'The Alps',     sub:'Bavaria & the Salzkammergut',  accent:'var(--alpine)', from:10},
-  {name:'Bohemia',      sub:'Prague, Krumlov & Dresden',    accent:'var(--gold)',   from:12},
-  {name:'North & home', sub:'Copenhagen, then home',        accent:'var(--dusk)',   from:16},
+  {name:'Copenhagen',   sub:'Two days to land',            accent:'var(--dusk)',   from:0},
+  {name:'Lofoten',      sub:'Arctic islands & the light',  accent:'var(--dawn)',   from:2},
+  {name:'The fjords',   sub:'Bergen & the western water',  accent:'var(--fjord)',  from:7},
+  {name:'The Alps',     sub:'Bavaria & the Salzkammergut',  accent:'var(--alpine)', from:12},
+  {name:'Bohemia',      sub:'Prague, Krumlov & Dresden',    accent:'var(--gold)',   from:14},
+  {name:'North & home', sub:'Copenhagen, then home',        accent:'var(--dusk)',   from:18},
 ];
 function legOf(i){ let L = LEGS[0]; for(const l of LEGS){ if(i >= l.from) L = l; } return L; }
 
@@ -73,10 +74,10 @@ function currentIndex(){
   }
   return -1;
 }
-function daysUntil(){ return Math.ceil((new Date(2026,8,30) - today())/864e5); }
+function daysUntil(){ return Math.ceil((new Date(2026,8,28) - today())/864e5); }
 /* fraction of the trip elapsed, 0..1 */
 function tripProgress(){
-  const s = new Date(2026,8,30), e = new Date(2026,9,18), n = today();
+  const s = new Date(2026,8,28), e = new Date(2026,9,18), n = today();
   return Math.max(0, Math.min(1, (n - s)/(e - s)));
 }
 function dateShort(d){ return esc(d.date.replace(/^\w+\s/,'')); }
@@ -162,8 +163,8 @@ function vToday(){
     h += `<div class="hero fade" style="--accent:${leg.accent}">
       <div class="eyebrow">${pre?'Counting down':'Trip complete'}</div>
       ${pre?`<div class="cd">${until}<small> days to go</small></div>
-      <h2 style="font-size:21px;margin-top:12px">Lofoten, then the long road south</h2>`
-      :`<h2>Eighteen nights, done.</h2>`}
+      <h2 style="font-size:21px;margin-top:12px">Copenhagen first, then Lofoten and the long road south</h2>`
+      :`<h2>Twenty nights, done.</h2>`}
       <div class="chips">
         <span class="chip">${DATA.days.length} days</span>
         <span class="chip">5 countries</span>
@@ -328,7 +329,7 @@ function render(){
   V.innerHTML=h;
   const idx=currentIndex();
   $('tSub').textContent = idx>=0 ? DATA.days[idx].date+' · day '+(idx+1)+' of '+DATA.days.length
-    : (daysUntil()>0 ? daysUntil()+' days to go' : '30 Sep – 18 Oct 2026');
+    : (daysUntil()>0 ? daysUntil()+' days to go' : '28 Sep – 18 Oct 2026');
   $('progBar').style.width = (tripProgress()*100).toFixed(1)+'%';
 }
 
