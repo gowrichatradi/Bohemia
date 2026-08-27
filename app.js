@@ -223,21 +223,37 @@ function vToday(){
     const pre = until > 0;
     const leg = legOf(0);
     h += `<div class="hero fade" style="--accent:${leg.accent}">
-      <div class="eyebrow">${pre?'Counting down':'Trip complete'}</div>
-      ${pre?`<div class="cd">${until}<small> days to go</small></div>
-      <h2 style="font-size:21px;margin-top:12px">Copenhagen first, then Lofoten and the long road south</h2>`
+      <div class="eyebrow"><span>${pre?'Counting down':'Trip complete'}</span>
+        <span class="dot"></span><span class="leg-tag">Arctic → Alpine</span></div>
+      ${pre?`<div class="cd">${until}<small>days until Copenhagen</small></div>
+      <h2>Copenhagen first, then Lofoten and the long road south.</h2>`
       :`<h2>Twenty nights, done.</h2>`}
-      <div class="chips">
-        <span class="chip">${DATA.days.length} days</span>
-        <span class="chip">5 countries</span>
-        <span class="chip">4 flights</span>
-      </div>
+      <div class="stay">${I.bed}<span>Trip begins · <b>Mon 28 Sep 2026</b></span></div>
       ${sceneSVG(leg.scene,'scene')}</div>`;
+    // stats trio
+    h += `<div class="stats fade">
+      <div class="st"><div class="n">${DATA.days.length}</div><div class="l">Days</div></div>
+      <div class="st"><div class="n">5</div><div class="l">Countries</div></div>
+      <div class="st"><div class="n">4</div><div class="l">Flights</div></div>
+    </div>`;
+    // epigraph — sets the tone
+    h += `<div class="epi fade"><p>Twenty nights across the top of Europe — Arctic light, fjords, a Bavarian fairy-tale, salt-mines older than the pyramids, and Prague at first light.</p>
+      <div class="att">The plan</div></div>`;
     h += journeyMap();
+    // upcoming legs — horizontal scroller
+    h += `<div class="preview fade"><div class="lab">${I.chev}The legs, in order</div>
+      <div class="plegs">` + LEGS.map((l,li)=>{
+        const d = DATA.days[l.from];
+        return `<div class="pl ${li===0?'on':''}" onclick="openDay(${l.from})">
+          <div class="nm">${esc(l.name)}</div>
+          <div class="dt">${dateShort(d)}</div>
+          <div class="sb">${esc(l.sub)}</div></div>`;
+      }).join('') + `</div></div>`;
+    // first-up card
     h += `<div class="card fade"><div class="lab">${I.chev}First up</div>`
-       + `<div class="ti" style="font-size:16px;font-weight:600">${esc(DATA.days[0].title)}</div>`
-       + `<div class="muted" style="margin-top:4px;font-size:14px">${esc(DATA.days[0].date)} · ${esc(DATA.days[0].stay)}</div>`
-       + `<button class="chip" style="margin-top:12px" onclick="openDay(0)">Open the day ${I.chev}</button></div>`;
+       + `<div class="ti" style="font-family:var(--serif);font-size:18px;font-weight:500;letter-spacing:-.02em;font-variation-settings:'opsz' 32">${esc(DATA.days[0].title)}</div>`
+       + `<div class="muted" style="margin-top:6px;font-size:14px">${esc(DATA.days[0].date)} · ${esc(DATA.days[0].stay)}</div>`
+       + `<button class="chip" style="margin-top:14px" onclick="openDay(0)">Open the day ${I.chev}</button></div>`;
     h += actionsCard();
   } else {
     const d = DATA.days[idx];

@@ -1,12 +1,14 @@
 /* Shared style for the per-day background & specials pages.
    Palette echoes the main app; typography reads like a printed page. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
   --bg:#0B0F13; --bg2:#121A20; --card:#161F25; --card2:#1D282F; --line:#26333A;
-  --ink:#EEF2F3; --ink2:#95A6AD; --ink3:#5F727A;
+  --ink:#F2F5F6; --ink2:#95A6AD; --ink3:#5F727A;
   --dawn:#4FD69C; --dusk:#E8A860; --fjord:#6BB6CE; --gold:#D9A441; --kid:#B79AE6;
-  --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
-  --serif:ui-serif,"New York",Georgia,serif;
-  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --cinema:#E8735A;
+  --sys:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  --serif:'Fraunces',ui-serif,"New York",Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,"SF Mono",Menlo,monospace;
   --safe-t:env(safe-area-inset-top);
   --safe-b:env(safe-area-inset-bottom);
 }
@@ -17,12 +19,14 @@ body{
   font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
   letter-spacing:-.005em;
   padding:calc(var(--safe-t) + 14px) 18px calc(28px + var(--safe-b));
+  font-feature-settings:"ss01";
 }
 body::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(120% 60% at 15% -5%, rgba(217,164,65,.08), transparent 60%),
-    radial-gradient(120% 55% at 95% 4%, rgba(107,182,206,.06), transparent 55%);
+    radial-gradient(140% 65% at 12% -8%, rgba(217,164,65,.10), transparent 60%),
+    radial-gradient(120% 55% at 92% 2%, rgba(107,182,206,.08), transparent 55%),
+    radial-gradient(90% 55% at 50% 105%, rgba(232,115,90,.05), transparent 60%);
 }
 article{max-width:640px;margin:0 auto}
 a{color:var(--fjord)}
@@ -33,13 +37,15 @@ a{color:var(--fjord)}
 header.pg{margin-bottom:22px}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gold);margin-bottom:8px}
-h1{font-family:var(--serif);font-size:28px;line-height:1.15;letter-spacing:-.025em;
-  font-weight:600;margin:0 0 10px}
-.lede{color:var(--ink2);font-size:16px;line-height:1.55;margin:0}
-.place{background:var(--card);border:.5px solid var(--line);border-radius:14px;
-  padding:16px 18px;margin:12px 0}
-.place h2{font-family:var(--serif);font-size:19px;letter-spacing:-.02em;margin:0 0 4px;
-  font-weight:600}
+h1{font-family:var(--serif);font-size:34px;line-height:1.08;letter-spacing:-.028em;
+  font-weight:500;margin:0 0 12px;font-variation-settings:"opsz" 144}
+.lede{color:var(--ink2);font-size:16.5px;line-height:1.55;margin:0;font-family:var(--serif);
+  font-style:italic;font-variation-settings:"opsz" 20}
+.place{background:var(--card);border:.5px solid var(--line);border-radius:16px;
+  padding:18px 20px;margin:14px 0;
+  box-shadow:0 12px 30px -18px rgba(0,0,0,.5)}
+.place h2{font-family:var(--serif);font-size:21px;letter-spacing:-.022em;margin:0 0 4px;
+  font-weight:500;font-variation-settings:"opsz" 48}
 .place .meta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink3);margin:0 0 10px}
 .place p{margin:8px 0;color:var(--ink2);font-size:15px;line-height:1.55}
@@ -56,5 +62,29 @@ h1{font-family:var(--serif);font-size:28px;line-height:1.15;letter-spacing:-.025
 .nav .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .foot{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--ink3);
   margin-top:22px;padding-top:14px;border-top:.5px solid var(--line);text-align:center}
+
+/* did-you-know trivia strip — a light pull-quote sitting just under the lede */
+.trivia{background:linear-gradient(160deg,rgba(107,182,206,.09),rgba(217,164,65,.05));
+  border:.5px solid var(--line);border-radius:14px;padding:14px 18px;margin:16px 0 4px;
+  position:relative;font-family:var(--serif);font-style:italic;font-size:15px;
+  line-height:1.55;color:var(--ink);font-variation-settings:"opsz" 24}
+.trivia b{font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--fjord);display:block;margin-bottom:6px;font-weight:500}
+
+/* on-screen / movies section */
+.movies{background:linear-gradient(155deg,rgba(232,115,90,.09),rgba(217,164,65,.05));
+  border:.5px solid var(--line);border-radius:16px;padding:18px 20px;margin:24px 0 0;
+  box-shadow:0 12px 30px -18px rgba(0,0,0,.5)}
+.movies .lab{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--cinema);margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.movies .lab::before{content:"◉";font-size:10px}
+.movies .flick{margin:0 0 14px;padding-bottom:14px;border-bottom:.5px solid var(--line)}
+.movies .flick:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
+.movies h3{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:-.018em;
+  margin:0 0 2px;color:var(--ink);font-variation-settings:"opsz" 32}
+.movies .yr{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink3);
+  text-transform:uppercase;margin-bottom:6px}
+.movies p{color:var(--ink2);font-size:14.5px;margin:0;line-height:1.55}
+.movies p em{font-style:normal;color:var(--gold)}
 </content>
 </invoke>
