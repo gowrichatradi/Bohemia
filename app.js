@@ -307,8 +307,10 @@ function vDays(){
 function vDay(i){
   const d = DATA.days[i];
   const prev = DATA.days[i-1], next = DATA.days[i+1];
+  const dayNum = String(i+1).padStart(2,'0');
+  const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 0 2px">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
   let h = `<button class="back" onclick="backToDays()">${I.chev}All days</button>`
-    + heroFor(d, i) + timeline(d);
+    + heroFor(d, i) + histLink + timeline(d);
   h += `<div class="daynav">`
     + (prev?`<button onclick="navigateDay(-1)"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
     + (next?`<button class="nx" onclick="navigateDay(1)"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)

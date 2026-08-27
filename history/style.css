@@ -1,0 +1,60 @@
+/* Shared style for the per-day background & specials pages.
+   Palette echoes the main app; typography reads like a printed page. */
+:root{
+  --bg:#0B0F13; --bg2:#121A20; --card:#161F25; --card2:#1D282F; --line:#26333A;
+  --ink:#EEF2F3; --ink2:#95A6AD; --ink3:#5F727A;
+  --dawn:#4FD69C; --dusk:#E8A860; --fjord:#6BB6CE; --gold:#D9A441; --kid:#B79AE6;
+  --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  --serif:ui-serif,"New York",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --safe-t:env(safe-area-inset-top);
+  --safe-b:env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sys);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  letter-spacing:-.005em;
+  padding:calc(var(--safe-t) + 14px) 18px calc(28px + var(--safe-b));
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(120% 60% at 15% -5%, rgba(217,164,65,.08), transparent 60%),
+    radial-gradient(120% 55% at 95% 4%, rgba(107,182,206,.06), transparent 55%);
+}
+article{max-width:640px;margin:0 auto}
+a{color:var(--fjord)}
+.back{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);text-decoration:none;
+  margin-bottom:20px}
+.back:hover{color:var(--ink)}
+header.pg{margin-bottom:22px}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:8px}
+h1{font-family:var(--serif);font-size:28px;line-height:1.15;letter-spacing:-.025em;
+  font-weight:600;margin:0 0 10px}
+.lede{color:var(--ink2);font-size:16px;line-height:1.55;margin:0}
+.place{background:var(--card);border:.5px solid var(--line);border-radius:14px;
+  padding:16px 18px;margin:12px 0}
+.place h2{font-family:var(--serif);font-size:19px;letter-spacing:-.02em;margin:0 0 4px;
+  font-weight:600}
+.place .meta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 10px}
+.place p{margin:8px 0;color:var(--ink2);font-size:15px;line-height:1.55}
+.place p.hist{color:var(--ink2)}
+.place p.spec{color:var(--ink)}
+.place p.spec b{color:var(--gold);font-weight:600;font-family:var(--mono);font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;display:inline-block;margin-right:6px}
+.nav{display:flex;gap:8px;margin-top:26px}
+.nav a{flex:1;background:var(--card);border:.5px solid var(--line);border-radius:12px;
+  padding:11px 12px;text-decoration:none;color:var(--ink2);font-size:13px;min-width:0}
+.nav a.nx{text-align:right}
+.nav .k{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:3px}
+.nav .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foot{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--ink3);
+  margin-top:22px;padding-top:14px;border-top:.5px solid var(--line);text-align:center}
+</content>
+</invoke>
