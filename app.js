@@ -148,9 +148,14 @@ function initJourneyMap(){
     minZoom:3, maxZoom:9
   });
   el._tpMap = map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    subdomains:'abcd', maxZoom:19,
-    attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a>, © <a href="https://carto.com/attributions">CARTO</a>'
+  // Esri World Dark Gray Canvas — free, no API key, dark styling
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:16,
+    attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>'
+  }).addTo(map);
+  // Country/city labels layer on top for legibility
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:16, opacity:.85
   }).addTo(map);
   // Route polyline in order
   const line = L.polyline(MAP_STOPS.map(s=>s.c), {
