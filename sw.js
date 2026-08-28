@@ -1,4 +1,4 @@
-const CACHE = 'arctic-alpine-v21';
+const CACHE = 'arctic-alpine-v22';
 const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png',
                 './history/style.css',
@@ -19,10 +19,17 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Don't intercept cross-origin requests (map tiles, Wikimedia images,
+  // Google Fonts) — let the browser handle its own caching.
+  if (url.origin !== self.location.origin) return;
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
+      // Only cache successful same-origin responses
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+      }
       return res;
     }).catch(() => caches.match('./index.html')))
   );

@@ -334,7 +334,12 @@ function vToday(){
   if(idx < 0){
     const pre = until > 0;
     const leg = legOf(0);
-    h += `<div class="hero fade" style="--accent:${leg.accent}">
+    // scenic pre-trip cover — Reine at sunrise
+    const preCover = (typeof COVER_PHOTOS !== 'undefined') ? COVER_PHOTOS[5] : null;
+    const coverCls = preCover ? ' has-cover' : '';
+    const coverEl  = preCover ? `<div class="hero-cover" style="background-image:url('${preCover.replace(/'/g,"%27")}')"></div>` : '';
+    h += `<div class="hero fade${coverCls}" style="--accent:${leg.accent}">
+      ${coverEl}
       <div class="eyebrow"><span>${pre?'Counting down':'Trip complete'}</span>
         <span class="dot"></span><span class="leg-tag">Arctic → Alpine</span></div>
       ${pre?`<div class="cd">${until}<small>days until Copenhagen</small></div>

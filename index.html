@@ -122,12 +122,15 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
 /* hero cover photo layer — see #1 */
 .hero-cover{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;
   opacity:0;transition:opacity 1.2s var(--ease)}
-.hero.has-cover .hero-cover{opacity:.4}
-.hero.has-cover::before{opacity:.75;
+.hero.has-cover .hero-cover{opacity:.7}
+.hero.has-cover{min-height:220px}
+.hero.has-cover::before{opacity:.85;
   background:
-    radial-gradient(60% 90% at 20% 100%, rgba(11,15,19,.92), transparent 60%),
-    linear-gradient(180deg, rgba(11,15,19,.35) 0%, rgba(11,15,19,.85) 85%)}
-.hero.has-cover .scene{opacity:.25}
+    radial-gradient(70% 100% at 20% 100%, rgba(11,15,19,.95), transparent 65%),
+    linear-gradient(180deg, rgba(11,15,19,.15) 0%, rgba(11,15,19,.35) 40%, rgba(11,15,19,.9) 90%)}
+.hero.has-cover .scene{opacity:.15}
+.hero.has-cover .eyebrow,.hero.has-cover .stay{text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.hero.has-cover h2{text-shadow:0 2px 12px rgba(0,0,0,.6)}
 .hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150%;z-index:0;
   pointer-events:none;opacity:.6;
   background:
