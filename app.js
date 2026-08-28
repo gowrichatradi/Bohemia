@@ -291,10 +291,18 @@ function heroFor(d, idx, includeSun){
       <span class="sun-t set">${esc(d.set||'—')}<span class="sun-i">${I.set}</span></span>
       ${dl ? `<span class="sun-dur">${dl.h}h&nbsp;${dl.m.toString().padStart(2,'0')}m</span>` : ''}
     </div>`;
-    // #6 moon phase for the night of this day
-    const mp = moonPhase(dayDate(d));
+    // #6 moon phase + rise/set for the night of this day
+    const dd = dayDate(d);
+    const mp = moonPhase(dd);
+    const loc = WX_LOCATIONS[idx] || [55.7,12.6];
+    const mt = moonTimes(dd, loc[0], loc[1]);
+    let mtHtml = '';
+    if (mt) {
+      if (mt.note) mtHtml = `<span class="pct">· ${esc(mt.note)}</span>`;
+      else mtHtml = `<span class="pct">· <span title="Moon rise">↑${esc(mt.rise||'—')}</span>&nbsp;·&nbsp;<span title="Moon set">↓${esc(mt.set||'—')}</span></span>`;
+    }
     sunBar += `<div class="moon-pill">${moonSVG(mp)}
-      <b>${esc(mp.name)}</b> <span class="pct">${mp.illum}%</span>
+      <b>${esc(mp.name)}</b> <span class="pct">${mp.illum}%</span> ${mtHtml}
     </div>`;
   }
   // #1 cover photo (Wikimedia Commons) — key is day number (idx+1)
@@ -394,20 +402,50 @@ function moonPhase(date){
   const idx = Math.floor((frac + 1/16) * 8) % 8;
   return { age, illum, name: names[idx], idx, frac };
 }
-/* SVG moon icon showing the phase (illuminated area) */
+/* SVG moon icon — draws the illuminated portion via SVG arcs.
+   phase 0=new (dark), 0.5=full (bright), 1=new again.
+   Uses one bright disc + one dark disc + an illuminated-region path. */
 function moonSVG(mp){
-  // approximate the terminator with an ellipse; simple, readable
-  const r = 6, cx = 8, cy = 8;
-  const phase = mp.frac; // 0 = new, 0.5 = full, 1 = new
+  const cx = 8, cy = 8, r = 6;
+  const phase = mp.frac;
+  const illum = 0.5 * (1 - Math.cos(phase * 2 * Math.PI)); // 0..1
+  // near-new: empty disc
+  if (illum < 0.02) {
+    return `<svg class="moon-svg" viewBox="0 0 16 16">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--bg)" stroke="var(--ink3)" stroke-width=".7"/>
+    </svg>`;
+  }
+  // near-full: solid bright disc
+  if (illum > 0.98) {
+    return `<svg class="moon-svg" viewBox="0 0 16 16">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--ink)"/>
+    </svg>`;
+  }
   const waxing = phase < 0.5;
-  const k = Math.abs(Math.cos(phase * 2 * Math.PI)); // 0 at half, 1 at new/full
-  const dark = phase === 0.5 ? '' :
-    `<ellipse cx="${cx}" cy="${cy}" rx="${(r*k).toFixed(2)}" ry="${r}"
-       fill="var(--bg)" transform="translate(${(waxing ? -r*(1-k) : r*(1-k)).toFixed(2)},0)"/>`;
-  const dot = phase < 0.05 || phase > 0.95
-    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--bg)" stroke="var(--ink3)" stroke-width=".7"/>`
-    : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--ink2)"/>${dark}`;
-  return `<svg class="moon-svg" viewBox="0 0 16 16">${dot}</svg>`;
+  const rx = r * Math.abs(1 - 2 * illum);
+  const outerSweep = waxing ? 1 : 0;
+  const termSweep = waxing
+    ? (illum < 0.5 ? 0 : 1)  // waxing: crescent=0, gibbous=1
+    : (illum < 0.5 ? 1 : 0); // waning: crescent=1, gibbous=0
+  const path = `M ${cx} ${cy-r} A ${r} ${r} 0 0 ${outerSweep} ${cx} ${cy+r} A ${rx.toFixed(2)} ${r} 0 0 ${termSweep} ${cx} ${cy-r} Z`;
+  return `<svg class="moon-svg" viewBox="0 0 16 16">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--bg)" stroke="var(--ink3)" stroke-width=".5"/>
+    <path d="${path}" fill="var(--ink)"/>
+  </svg>`;
+}
+
+/* Moon rise / set for a given date + location via SunCalc.
+   Returns { rise: 'HH:MM', set: 'HH:MM', note?: 'up all night' } */
+function moonTimes(date, lat, lon){
+  if (typeof SunCalc === 'undefined') return null;
+  const t = SunCalc.getMoonTimes(date, lat, lon, true);
+  const fmt = d => {
+    if (!(d instanceof Date) || isNaN(d)) return null;
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+  if (t.alwaysUp)   return { note:'Moon up all night' };
+  if (t.alwaysDown) return { note:'Moon below horizon' };
+  return { rise: fmt(t.rise), set: fmt(t.set) };
 }
 
 /* ---------- #4 sky colour by hour (device local time) ---------- */
@@ -592,7 +630,14 @@ function auroraCard(d){
     <p>You're at 68°N, under the auroral oval most clear October nights. Aurora is a cloud problem more than a Kp problem — watch the sky from sunset (${esc(d.set||'~18:30')}) through about 02:00, peak often 22:00–midnight.</p>
     <p style="color:var(--ink3);font-size:12.5px">Best local spots: <b style="color:var(--ink2)">Hamnøy bridge</b>, <b style="color:var(--ink2)">Skagsanden beach</b>, <b style="color:var(--ink2)">Gimsøysand</b> — all face north with no light pollution.</p>
     ${liveKp}
-    <div class="moon-pill" style="margin-top:8px">${moonSVG(mp)}<b>${esc(mp.name)}</b> · ${moonLine}</div>
+    <div class="moon-pill" style="margin-top:8px">${moonSVG(mp)}<b>${esc(mp.name)}</b> · ${moonLine}${(function(){
+      const dIdx = DATA.days.indexOf(d);
+      const loc = WX_LOCATIONS[dIdx] || [67.9,13.1];
+      const mt = moonTimes(dayDate(d), loc[0], loc[1]);
+      if (!mt) return '';
+      if (mt.note) return ` <span class="pct">· ${esc(mt.note)}</span>`;
+      return ` <span class="pct">· ↑${esc(mt.rise||'—')} ↓${esc(mt.set||'—')}</span>`;
+    })()}</div>
   </div>`;
 }
 function actionsCard(){
