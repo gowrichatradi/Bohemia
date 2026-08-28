@@ -456,42 +456,42 @@ ul.pl strong{color:var(--ink);font-weight:600}
   margin-top:2px}
 .dish .dd{font-size:14px;color:var(--ink2);margin-top:6px;line-height:1.5}
 
-/* ===== at-a-glance summary strip (day view) ===== */
+/* ===== at-a-glance summary strip (day view) — compact ===== */
 .glance-card{background:linear-gradient(160deg,var(--card) 0%,var(--bg2) 100%);
-  border:.5px solid var(--line);border-radius:18px;padding:16px 14px 14px;margin:2px 0 14px;
-  box-shadow:0 16px 40px -24px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.02) inset;
-  position:relative;overflow:hidden}
-.glance{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.g{position:relative;padding:14px 8px 12px;border-radius:14px;text-align:center;overflow:hidden;
+  border:.5px solid var(--line);border-radius:14px;padding:10px 10px 8px;margin:2px auto 14px;
+  box-shadow:0 12px 30px -20px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.02) inset;
+  position:relative;overflow:hidden;max-width:420px}
+.glance{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g{position:relative;padding:9px 6px 8px;border-radius:11px;text-align:center;overflow:hidden;
   background:color-mix(in srgb,var(--gc,var(--fjord)) 5%,var(--card2));
   border:.5px solid color-mix(in srgb,var(--gc,var(--fjord)) 15%,var(--line))}
-.g::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;
-  background:radial-gradient(80% 60% at 50% -10%,color-mix(in srgb,var(--gc,var(--fjord)) 40%,transparent),transparent 70%)}
+.g::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.3;
+  background:radial-gradient(80% 60% at 50% -10%,color-mix(in srgb,var(--gc,var(--fjord)) 35%,transparent),transparent 70%)}
 .g>*{position:relative;z-index:1}
 .g.g-move{--gc:var(--fjord)}
 .g.g-rise{--gc:var(--dawn)}
 .g.g-set{--gc:var(--dusk)}
-.g .g-icon{width:30px;height:30px;border-radius:50%;
+.g .g-icon{width:22px;height:22px;border-radius:50%;
   background:color-mix(in srgb,var(--gc) 18%,var(--card));
   border:.5px solid color-mix(in srgb,var(--gc) 35%,transparent);
   color:var(--gc);display:inline-flex;align-items:center;justify-content:center;
-  margin-bottom:9px;box-shadow:0 0 12px color-mix(in srgb,var(--gc) 22%,transparent)}
-.g .g-icon svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;
+  margin-bottom:5px;box-shadow:0 0 8px color-mix(in srgb,var(--gc) 22%,transparent)}
+.g .g-icon svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
-.g .g-v{font-family:var(--sys);font-size:19px;font-weight:700;color:var(--ink);
+.g .g-v{font-family:var(--sys);font-size:14px;font-weight:700;color:var(--ink);
   letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.g .g-l{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--ink3);margin-top:5px}
+.g .g-l{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin-top:3px}
 
-/* sun arc */
-.sun-arc{margin-top:12px;padding-top:10px;border-top:.5px solid var(--line);text-align:center}
-.sun-arc svg{width:100%;max-width:320px;height:auto;display:block;margin:0 auto}
-.sun-arc circle[fill*="sun-"]{filter:drop-shadow(0 0 5px rgba(217,164,65,.6))}
-.daylight{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--ink3);margin-top:6px}
+/* sun arc — compact */
+.sun-arc{margin-top:8px;padding-top:6px;border-top:.5px solid var(--line);text-align:center}
+.sun-arc svg{width:100%;max-width:220px;height:auto;display:block;margin:0 auto}
+.sun-arc circle[fill*="sun-"]{filter:drop-shadow(0 0 4px rgba(217,164,65,.5))}
+.daylight{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);margin-top:2px}
 .daylight span{color:var(--gold);font-weight:500}
-.daylight b{color:var(--ink3);font-weight:400;font-size:8.5px;margin-left:1px}
+.daylight b{color:var(--ink3);font-weight:400;font-size:8px;margin-left:1px}
 
 /* ===== aurora teaser card ===== */
 .aurora-card{background:linear-gradient(160deg,rgba(79,214,156,.12),rgba(107,182,206,.06));
