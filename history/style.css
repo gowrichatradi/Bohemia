@@ -97,3 +97,15 @@ h1{font-family:var(--sys);font-size:32px;line-height:1.15;letter-spacing:-.028em
   border:.5px solid var(--line)}
 .drive-strip h2{color:var(--dawn);font-size:20px}
 .drive-strip .meta{color:var(--dawn);opacity:.85}
+
+/* photo-strip — photography tips */
+.photo-strip{background:linear-gradient(155deg,rgba(159,216,210,.10),rgba(107,182,206,.05));
+  border:.5px solid var(--line)}
+.photo-strip h2{color:#9FD8D2;font-size:20px}
+.photo-strip .meta{color:#9FD8D2;opacity:.85}
+
+/* secret-strip — unique or lesser-known place */
+.secret-strip{background:linear-gradient(155deg,rgba(217,164,65,.10),rgba(232,168,96,.05));
+  border:.5px solid var(--line)}
+.secret-strip h2{color:var(--gold);font-size:20px}
+.secret-strip .meta{color:var(--gold);opacity:.85}
