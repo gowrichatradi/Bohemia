@@ -71,27 +71,70 @@ function smoothPath(pts){
 }
 
 /* ---------- the journey map ---------- */
+/* geographic-style layout: each leg placed by rough lat/lon.
+   viewBox 380x260, lon 3..16 → x 20..360, lat 47..69 → y 20..240 */
 function journeyMap(){
   const here = currentLegIndex();
-  const X=[26,90,154,218,282,346], Y=[86,40,54,74,100,86];
-  const pts = LEGS.map((l,i)=>[X[i],Y[i]]);
-  const bright = here>0 ? smoothPath(pts.slice(0,here+1)) : '';
-  let g = '';
-  LEGS.forEach((l,i)=>{
-    const st = here<0 ? (i===0?'next':'future') : (i<here?'done':i===here?'active':'future');
-    const big = st==='active'||st==='next';
-    g += `<g class="jn ${st}" style="--a:${l.accent}" onclick="openDay(${l.from})">`
-       + (big?`<circle class="ring" cx="${X[i]}" cy="${Y[i]}" r="7"/>`:'')
-       + `<circle cx="${X[i]}" cy="${Y[i]}" r="${big?6.5:5}"/>`
-       + `<text class="jl" x="${X[i]}" y="128">${esc(l.short)}</text>`
-       + `<text class="jd" x="${X[i]}" y="139">${dateShort(DATA.days[l.from])}</text></g>`;
+  // leg → [lat, lon] anchor (representative city of each leg)
+  const GEO = [
+    [55.7, 12.6],  // Copenhagen
+    [67.9, 13.1],  // Lofoten (Reine)
+    [60.4,  5.3],  // Bergen / fjords
+    [47.6, 10.7],  // Alps / Neuschwanstein
+    [50.1, 14.4],  // Bohemia / Prague
+    [55.7, 12.6],  // Copenhagen return
+  ];
+  const px = lon => 20 + (lon - 3)*(340/13);
+  const py = lat => 20 + (69 - lat)*(220/22);
+  const pts = GEO.map(([la,lo]) => [+px(lo).toFixed(1), +py(la).toFixed(1)]);
+  // latitude grid lines
+  let grid = '';
+  [50, 55, 60, 65].forEach(la => {
+    const y = py(la);
+    grid += `<line x1="14" y1="${y}" x2="374" y2="${y}" stroke="var(--line)" stroke-width=".5" stroke-dasharray="2 4" opacity=".5"/>`;
+    grid += `<text x="18" y="${y-3}" fill="var(--ink3)" font-family="var(--mono)" font-size="8" opacity=".6">${la}°N</text>`;
   });
-  const cap = here<0 ? 'The whole arc — Copenhagen up to the Arctic, then the long way south and home.'
-                     : 'You’re on the '+esc(legOf(currentIndex()).name)+' leg.';
+  // twinkling stars (deterministic — same each render)
+  let stars = '';
+  const S = [[42,32,.7],[95,18,.4],[168,42,.6],[240,26,.5],[312,54,.7],[356,110,.4],
+             [30,138,.5],[110,196,.4],[210,210,.6],[318,190,.5],[300,90,.3]];
+  S.forEach(([x,y,o],i)=>{
+    stars += `<circle cx="${x}" cy="${y}" r="1" fill="#ffffff" opacity="${o}"><animate attributeName="opacity" values="${o};${o*.3};${o}" dur="${3+i%3}s" repeatCount="indefinite"/></circle>`;
+  });
+  const routePath = smoothPath(pts);
+  const activeLen = here>0 ? here/(pts.length-1) : 0;
+  // pin nodes
+  let g = '';
+  pts.forEach(([x,y],i)=>{
+    const l = LEGS[i], done = here>i, active = here===i, next = here<0 && i===0;
+    const big = active || next;
+    const col = l.accent;
+    g += `<g class="jn ${done?'done':active?'active':next?'next':'future'}" style="--a:${col}" onclick="openDay(${l.from})">`;
+    if (big) g += `<circle class="ring" cx="${x}" cy="${y}" r="8"/>`;
+    g += `<circle cx="${x}" cy="${y}" r="${big?6.5:4.5}"/>`;
+    // label — alternating above/below to reduce collisions
+    const ly = y + (i%2 ? 20 : -12);
+    g += `<text class="jl" x="${x}" y="${ly}">${esc(l.short)}</text>`;
+    g += `<text class="jd" x="${x}" y="${ly+9}">${dateShort(DATA.days[l.from])}</text>`;
+    g += `</g>`;
+  });
+  const cap = here<0
+    ? 'The whole arc — Copenhagen up to the Arctic, then south through the fjords, the Alps, Bohemia and home.'
+    : 'You’re on the '+esc(legOf(currentIndex()).name)+' leg.';
   return `<div class="card jmap fade"><div class="lab">${I.rail}The journey</div>
-    <svg viewBox="0 0 372 150" class="jsvg" aria-hidden="true">
-      <path class="jpath" d="${smoothPath(pts)}"/>
-      ${bright?`<path class="jpath on" d="${bright}"/>`:''}
+    <svg viewBox="0 0 388 260" class="jsvg" aria-hidden="true">
+      <defs>
+        <linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="var(--dawn)"/>
+          <stop offset=".55" stop-color="var(--fjord)"/>
+          <stop offset="1" stop-color="var(--gold)"/>
+        </linearGradient>
+      </defs>
+      ${grid}
+      ${stars}
+      <path class="jpath base" d="${routePath}"/>
+      <path class="jpath animate" d="${routePath}" pathLength="1"
+        style="stroke-dasharray:1;stroke-dashoffset:${(1-Math.max(activeLen,0.001)).toFixed(3)}"/>
       ${g}
     </svg>
     <div class="jcap">${cap}</div></div>`;
@@ -205,8 +248,10 @@ function heroFor(d, idx){
       <span class="chip ${d.car?'car':'nocar'}">${d.car?I.car:I.nocar}${d.car?'Car':'No car'}</span>
       ${d.drive?`<span class="chip drive">${d.drive} drive</span>`:''}
       ${d.transport?`<span class="chip ${d.transport.kind}">${I[d.transport.kind]}${esc(d.transport.text)}</span>`:''}
-      ${d.rise?`<span class="chip rise">${I.rise}${esc(d.rise)}</span>`:''}
-      ${d.set?`<span class="chip set">${I.set}${esc(d.set)}</span>`:''}
+      <span class="chip sun">
+        <span class="s-r">${I.rise}${esc(d.rise||'—')}</span>
+        <span class="s-s">${I.set}${esc(d.set||'—')}</span>
+      </span>
     </div>
     <div class="stay">${I.bed}<span>Tonight · <b>${esc(d.stay)}</b></span></div>
     ${sceneSVG(leg.scene,'scene')}
@@ -270,6 +315,17 @@ function vToday(){
   }
   return h;
 }
+/* Aurora viewing teaser — shown on Lofoten days.
+   Static advice; no external API dependency required. */
+function auroraCard(d){
+  return `<div class="aurora-card fade">
+    <div class="lab">${I.sun}Aurora watch · ${esc(d.set||'sunset')} to dawn</div>
+    <h3>Tonight in Lofoten</h3>
+    <p>Aurora is a cloud problem, not a Kp problem — you're already at 68°N, which is under the auroral oval most clear nights of October. Watch the sky after sunset (${esc(d.set||'~18:30')}) through about 02:00; the peak is often 22:00–midnight.</p>
+    <p style="color:var(--ink3);font-size:12.5px">Best local spots: <b style="color:var(--ink2)">Hamnøy bridge</b>, <b style="color:var(--ink2)">Skagsanden beach</b>, <b style="color:var(--ink2)">Gimsøysand</b> — all face north with no light pollution.</p>
+    <span class="kp">Kp ≥ 3 is enough at this latitude</span>
+  </div>`;
+}
 function actionsCard(){
   const acts = DATA.actions.filter(a=>a.tag==='Act').slice(0,4);
   if(!acts.length) return '';
@@ -325,8 +381,18 @@ function vDay(i){
   const prev = DATA.days[i-1], next = DATA.days[i+1];
   const dayNum = String(i+1).padStart(2,'0');
   const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 0 2px">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
+  // at-a-glance strip
+  const drive = d.drive || (d.transport ? d.transport.kind.toUpperCase() : '—');
+  const glance = `<div class="glance fade">
+    <div class="g"><div class="l">Move</div><div class="v">${esc(drive)}</div></div>
+    <div class="g"><div class="l">Sunrise</div><div class="v">${esc(d.rise||'—')}</div></div>
+    <div class="g"><div class="l">Sunset</div><div class="v">${esc(d.set||'—')}</div></div>
+  </div>`;
+  // aurora teaser on Lofoten leg days (index 2..7 → Reine and Svolvær)
+  const isLofoten = i>=2 && i<=6;
+  const aurora = isLofoten ? auroraCard(d) : '';
   let h = `<button class="back" onclick="backToDays()">${I.chev}All days</button>`
-    + heroFor(d, i) + histLink + timeline(d);
+    + heroFor(d, i) + glance + histLink + aurora + timeline(d);
   h += `<div class="daynav">`
     + (prev?`<button onclick="navigateDay(-1)"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
     + (next?`<button class="nx" onclick="navigateDay(1)"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)
@@ -385,8 +451,64 @@ function vBook(){
   return h + '</div>';
 }
 
+/* ---------- regional food dictionary ---------- */
+const DISHES = [
+  { c:'Denmark 🇩🇰', accent:'var(--fjord)', notes:'Rye bread as a plate; pork; open sandwiches; strong coffee; cinnamon buns everywhere.', items:[
+    { n:'Smørrebrød', g:'open sandwich', p:'80–140 DKK · $17–29', d:'Rye bread piled with pickled herring, roast beef with remoulade, or shrimp with lemon. Torvehallerne\'s Hallernes stall does the traditional versions.'},
+    { n:'Frikadeller', g:'pork meatballs', p:'90–140 DKK', d:'Pan-fried pork or veal meatballs with brown gravy and potatoes. Every canteen and every home makes them.'},
+    { n:'Stegt flæsk', g:'crispy pork with parsley sauce', p:'150–200 DKK', d:'Officially voted Denmark\'s national dish in 2014. Slabs of crackling pork with new potatoes and a creamy parsley sauce.'},
+    { n:'Kanelsnegle', g:'cinnamon snail', p:'25–40 DKK', d:'The Danish cardamom-and-cinnamon roll. Sonny on Rådhusstræde does one of the best. Better than what you know as a cinnamon bun.'},
+    { n:'Wienerbrød', g:'"Danish pastry"', p:'25–45 DKK', d:'The pastry the world knows as Danish — but here it\'s called "Viennese bread" because the recipe came from Austria in the 1840s.'},
+    { n:'Æbleskiver', g:'ball pancakes', p:'50–80 DKK', d:'Round Danish pancakes dusted with icing sugar and jam, cooked in a special cast-iron pan. Christmas market food, but Tivoli sells them year-round.'},
+  ]},
+  { c:'Norway 🇳🇴', accent:'var(--dawn)', notes:'Fish, lamb, brown cheese, and everything smoked. Expensive — expect 30–50% above home.', items:[
+    { n:'Skrei', g:'winter cod', p:'250–400 NOK · $35–55', d:'The Lofoten winter cod. In October you\'ll find frozen skrei on most menus in Lofoten and Bergen — poached with parsley butter, served with potatoes.'},
+    { n:'Fårikål', g:'lamb and cabbage', p:'220–320 NOK', d:'Norway\'s national dish. Lamb slow-cooked with cabbage and peppercorns for hours. October is peak Norwegian lamb season.'},
+    { n:'Brunost / Geitost', g:'brown goat cheese', p:'30–60 NOK a slice', d:'Caramelised whey cheese — sweet, dense, unlike anything else. Undredal\'s hand-made version on Day 11 is the real thing. Slice thin.'},
+    { n:'Rakfisk', g:'fermented trout', p:'260–400 NOK', d:'Not for the tentative. Freshwater trout salt-fermented for 2–3 months. Served raw with flatbread and sour cream. Peak season is autumn — you\'re in it.'},
+    { n:'Krumkake', g:'cone waffle', p:'20–40 NOK', d:'Thin embossed waffle rolled into a cone, filled with whipped cream. Traditional Norwegian coffee-table pastry.'},
+    { n:'Reker', g:'North Sea shrimp', p:'150–220 NOK', d:'Small sweet cold-water prawns eaten with mayonnaise on white bread. Bergen fish market at lunch.'},
+  ]},
+  { c:'Germany (Bavaria) 🇩🇪', accent:'var(--gold)', notes:'Pork, beer, pretzels, and one universal dumpling shape. Sunday closures — plan lunch.', items:[
+    { n:'Schweinshaxe', g:'roast pork knuckle', p:'€18–26', d:'Whole pork knuckle roasted until the skin blisters into crackling. A single portion feeds two. Order with dumplings and sauerkraut.'},
+    { n:'Weißwurst', g:'white sausage', p:'€3–5 each', d:'Bavarian veal-and-pork sausage eaten only before noon — traditionally with sweet mustard, a pretzel and a wheat beer. Peel the skin before eating.'},
+    { n:'Kaiserschmarrn', g:'"emperor\'s mess"', p:'€8–14', d:'Torn-up fluffy pancake with icing sugar, raisins and stewed plum compote. Named for Emperor Franz Joseph, who apparently loved it. Alpine hut classic.'},
+    { n:'Käsespätzle', g:'cheese noodles', p:'€10–14', d:'Hand-cut egg noodles baked with alpine cheese and topped with fried onions. Southern Germany\'s mac-and-cheese, and gluten-heavy — order for two.'},
+    { n:'Brezel', g:'soft pretzel', p:'€1.50–3', d:'Bavarian breakfast, snack and beer pairing all in one. Look for a bakery that makes them fresh; supermarket ones are inferior.'},
+    { n:'Apfelstrudel', g:'apple strudel', p:'€5–8', d:'Rolled apple pastry with warm vanilla sauce. Every alpine café worth stopping at.'},
+  ]},
+  { c:'Austria 🇦🇹', accent:'var(--dusk)', notes:'Café-house culture invented here. Cake is not optional.', items:[
+    { n:'Wiener Schnitzel', g:'veal cutlet', p:'€18–28', d:'Real Wiener Schnitzel is veal (not pork). Thin, breaded, fried. The pork version is called Schnitzel Wiener Art — legally required to be labelled differently.'},
+    { n:'Zaunerstollen', g:'Bad Ischl nougat log', p:'€12–20 (small)', d:'Konditorei Zauner\'s signature pastry, made in Bad Ischl since 1832. Almond, nougat and wafer. Buy one for the drive to Prague.'},
+    { n:'Sachertorte', g:'chocolate cake', p:'€5–9 slice', d:'Dense chocolate cake with apricot glaze under dark-chocolate icing. The original Sacher recipe is at Hotel Sacher, Vienna — copies are everywhere.'},
+    { n:'Tafelspitz', g:'boiled beef', p:'€22–34', d:'Boiled beef with root vegetables, apple-horseradish sauce, and chive potatoes. Franz Joseph ate it almost every day for 60 years.'},
+    { n:'Kaiserschmarrn', g:'emperor\'s mess', p:'€8–14', d:'Also Austrian. Any Salzkammergut Alpine hut serves it.'},
+    { n:'Melange', g:'coffee', p:'€4–6', d:'Vienna\'s cappuccino equivalent — espresso with steamed milk and foam. Order it "kleiner Brauner" for a small dark version, "großer Melange" for milky.'},
+  ]},
+  { c:'Czechia 🇨🇿', accent:'var(--bohemia)', notes:'Cheap. Meat-and-dumpling heavy. Beer is often cheaper than water.', items:[
+    { n:'Svíčková', g:'beef in cream sauce', p:'220–320 CZK · $14–20', d:'Beef sirloin in a creamy root-vegetable sauce with cranberry jam and bread dumplings. The national dish.'},
+    { n:'Vepřo knedlo zelo', g:'pork, dumplings, cabbage', p:'180–280 CZK', d:'The other national dish. Roast pork with houskový knedlík (bread dumplings) and stewed sauerkraut. Every pub.'},
+    { n:'Trdelník', g:'chimney cake', p:'80–150 CZK', d:'Actually not traditionally Czech — Slovak/Hungarian import that took over Prague in the 2000s. Tourists love it. Locals shrug.'},
+    { n:'Chlebíčky', g:'open sandwiches', p:'25–60 CZK each', d:'Bread rounds topped with ham, egg, potato salad. Cafeteria staple. Sisters of the Danish smørrebrød.'},
+    { n:'Pilsner Urquell', g:'the original pilsner', p:'40–70 CZK', d:'The city of Plzeň invented the pilsner in 1842. In Prague, the real thing on tap costs less than a bottle of water. Ask for "unfiltered" (nefiltrovaný) if you see it.'},
+    { n:'Palačinky', g:'crêpes', p:'80–150 CZK', d:'Czech crêpes filled with jam, quark or Nutella. Universal children\'s dessert.'},
+  ]},
+];
+function vDishes(){
+  return DISHES.map(country => `
+    <div class="grph" style="color:${country.accent}">${esc(country.c)}</div>
+    <p class="intro" style="margin-top:0">${esc(country.notes)}</p>
+    <div class="dishes">` +
+    country.items.map(it => `<div class="dish">
+      <div class="dn">${esc(it.n)}<span class="dg">${esc(it.g)}</span></div>
+      <div class="dp">${esc(it.p)}</div>
+      <div class="dd">${fmt(it.d)}</div>
+    </div>`).join('')
+    + `</div>`).join('');
+}
+
 function vInfo(){
-  const tabs = ['Light','Food','Shops','Packing','Child'];
+  const tabs = ['Light','Food','Dishes','Shops','Packing','Child'];
   let h = `<div class="sect fade"><h2>Guide</h2>
     <div class="seg"><div class="thumb" style="--n:${S.seg};width:calc((100% - 6px)/${tabs.length})"></div>`
     + tabs.map((t,i)=>`<button class="${S.seg===i?'on':''}" onclick="S.seg=${i};render()">${t}</button>`).join('')
@@ -400,10 +522,11 @@ function vInfo(){
       + `</tbody></table></div>`;
   }
   if(S.seg===1) h += groupsHTML(DATA.food);
-  if(S.seg===2) h += groupsHTML(DATA.grocery);
-  if(S.seg===3) h += DATA.wearGroups && DATA.wearGroups.length ? groupsHTML(DATA.wearGroups)
+  if(S.seg===2) h += vDishes();
+  if(S.seg===3) h += groupsHTML(DATA.grocery);
+  if(S.seg===4) h += DATA.wearGroups && DATA.wearGroups.length ? groupsHTML(DATA.wearGroups)
                    : listHTML(DATA.wear);
-  if(S.seg===4) h += listHTML(DATA.kid);
+  if(S.seg===5) h += listHTML(DATA.kid);
   return h + '</div>';
 }
 function groupsHTML(groups){
@@ -453,6 +576,16 @@ function render(){
   $('tSub').textContent = idx>=0 ? DATA.days[idx].date+' · day '+(idx+1)+' of '+DATA.days.length
     : (daysUntil()>0 ? daysUntil()+' days to go' : '28 Sep – 18 Oct 2026');
   $('progBar').style.width = (tripProgress()*100).toFixed(1)+'%';
+  // top-bar progress ring
+  const p = tripProgress();
+  const pr = $('pringFg'); if (pr) pr.style.strokeDashoffset = (1 - p).toFixed(3);
+  const pt = $('pringTxt');
+  if (pt){
+    const until = daysUntil();
+    if (idx < 0 && until > 0) pt.textContent = 'T-'+until;
+    else if (p >= 1) pt.textContent = '✓';
+    else pt.textContent = Math.round(p*100)+'%';
+  }
 }
 
 document.querySelectorAll('.tab').forEach(b=>{

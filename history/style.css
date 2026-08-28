@@ -86,3 +86,15 @@ h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.022
   text-transform:uppercase;margin-bottom:6px}
 .movies p{color:var(--ink2);font-size:14.5px;margin:0;line-height:1.55}
 .movies p em{font-style:normal;color:var(--gold)}
+
+/* kid-strip — the little-one's version of today */
+.kid-strip{background:linear-gradient(155deg,rgba(183,154,230,.10),rgba(107,182,206,.05));
+  border:.5px solid var(--line)}
+.kid-strip h2{color:var(--kid)}
+.kid-strip .meta{color:var(--kid);opacity:.85}
+
+/* drive-strip — podcast / audiobook for the drive */
+.drive-strip{background:linear-gradient(155deg,rgba(79,214,156,.09),rgba(107,182,206,.05));
+  border:.5px solid var(--line)}
+.drive-strip h2{color:var(--dawn);font-size:20px}
+.drive-strip .meta{color:var(--dawn);opacity:.85}
