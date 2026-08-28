@@ -844,7 +844,48 @@ function vInfo(){
   if(S.seg===4) h += DATA.wearGroups && DATA.wearGroups.length ? groupsHTML(DATA.wearGroups)
                    : listHTML(DATA.wear);
   if(S.seg===5) h += listHTML(DATA.kid);
+  // Force-refresh utility — sits at the bottom of every Guide tab.
+  h += `<div class="card fade" style="margin-top:24px"><div class="lab">${I.warn}App cache</div>
+    <div class="muted" style="font-size:13.5px;margin-bottom:12px">
+      If the app is behaving oddly or you know an update was pushed but you're not seeing it,
+      force-refresh — this clears the local cache and reloads fresh.
+    </div>
+    <button class="chip" style="background:rgba(232,115,90,.14);color:var(--warn);border:.5px solid rgba(232,115,90,.3)"
+      onclick="forceRefresh()">${I.warn}Force refresh</button>
+    <div class="tiny" id="cacheVer" style="margin-top:10px">cache: loading…</div>
+  </div>`;
   return h + '</div>';
+}
+
+/* Clear the service-worker cache and hard-reload.
+   Handy on phones where clearing site data is buried in system Settings. */
+async function forceRefresh(){
+  if (!confirm('This will clear the app cache and reload. Proceed?')) return;
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (_) {}
+  // add a query-string cachebuster and reload
+  const url = new URL(location.href);
+  url.searchParams.set('nc', Date.now().toString(36));
+  location.replace(url.toString());
+}
+/* Show the current cache version — helpful for debugging staleness */
+async function updateCacheVer(){
+  const el = document.getElementById('cacheVer');
+  if (!el) return;
+  try {
+    const keys = 'caches' in window ? await caches.keys() : [];
+    el.textContent = keys.length ? 'cache: ' + keys.join(', ') : 'cache: (none)';
+  } catch (_) {
+    el.textContent = 'cache: (unavailable)';
+  }
 }
 function groupsHTML(groups){
   return groups.map(g=>`<div class="grph">${esc(g.head)}</div>` + g.rows.map(r=>
@@ -898,6 +939,8 @@ function render(){
     // small delay so the container has laid out
     requestAnimationFrame(() => initJourneyMap());
   }
+  // show cache version in the guide tab
+  if (document.getElementById('cacheVer')) updateCacheVer();
   // top-bar progress ring
   const p = tripProgress();
   const pr = $('pringFg'); if (pr) pr.style.strokeDashoffset = (1 - p).toFixed(3);
