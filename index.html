@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0B0F13; --bg2:#121A20; --card:#161F25; --card2:#1D282F; --line:#26333A;
@@ -21,7 +21,7 @@
   --warn:#E8735A; --gold:#D9A441; --bohemia:#D9A441; --kid:#B79AE6;
   --accent:var(--fjord);
   --sys:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
-  --serif:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+  --serif:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,"SF Mono",Menlo,monospace;
   --safe-t:env(safe-area-inset-top);
   --safe-b:env(safe-area-inset-bottom);
@@ -117,11 +117,11 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
   text-transform:uppercase;color:var(--dusk);display:flex;align-items:center;gap:8px}
 .hero .leg-tag{color:var(--accent)}
 .hero .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5}
-.hero h2{font-family:var(--serif);font-size:30px;line-height:1.12;margin:12px 0 16px;
-  letter-spacing:-.025em;font-weight:500}
-.hero .cd{font-family:var(--serif);font-size:96px;font-weight:600;line-height:.9;
-  letter-spacing:-.045em;margin:14px 0 6px;
-  background:linear-gradient(180deg,var(--ink) 0%,var(--dawn) 92%);-webkit-background-clip:text;background-clip:text;color:transparent;
+.hero h2{font-family:var(--serif);font-size:26px;line-height:1.2;margin:12px 0 16px;
+  letter-spacing:-.02em;font-weight:600;color:var(--ink)}
+.hero .cd{font-family:var(--serif);font-size:88px;font-weight:800;line-height:.95;
+  letter-spacing:-.05em;margin:14px 0 6px;
+  color:var(--ink);
   display:inline-block}
 .hero .cd small{font-size:15px;font-weight:400;color:var(--ink2);letter-spacing:.02em;
   -webkit-text-fill-color:var(--ink2);display:block;margin-top:6px;
@@ -185,30 +185,49 @@ button.chip:active{transform:scale(.95)}
 .legband-t .nm{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.015em}
 .legband-t .rg{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--ink2);margin-left:auto;white-space:nowrap}
 .legband-s{position:relative;z-index:1;font-size:12px;color:var(--ink2);margin-top:3px}
-/* journey map — geographic-style */
-.jmap{position:relative;overflow:hidden}
-.jmap::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(90% 60% at 50% 40%,rgba(107,182,206,.06),transparent 70%)}
-.jmap .jsvg{width:100%;height:auto;display:block;margin-top:2px;overflow:visible;position:relative}
-.jpath{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.jpath.base{stroke:var(--line);opacity:.9}
-.jpath.animate{stroke:url(#rgrad);stroke-width:2.6;filter:drop-shadow(0 0 6px rgba(79,214,156,.35));
-  transition:stroke-dashoffset 1.6s var(--ease);animation:pathDraw 2.4s var(--ease) both}
-@keyframes pathDraw{from{stroke-dashoffset:1}}
-.jn{cursor:pointer}
-.jn circle{fill:var(--bg);stroke:var(--a);stroke-width:2}
-.jn.done circle,.jn.active circle{fill:var(--a)}
-.jn.future circle{opacity:.55}
-.jn .ring{fill:none;stroke:var(--a);stroke-width:1.8;transform-box:fill-box;transform-origin:center;
-  animation:jring 2.4s var(--ease) infinite}
-@keyframes jring{0%{opacity:.7;transform:scale(1)}70%{opacity:0;transform:scale(2.6)}100%{opacity:0;transform:scale(2.6)}}
-.jl{fill:var(--ink2);font-family:var(--mono);font-size:9.5px;text-anchor:middle;letter-spacing:.02em;
-  font-weight:500}
-.jd{fill:var(--ink3);font-family:var(--mono);font-size:8px;text-anchor:middle;opacity:.7}
-.jn.active .jl,.jn.next .jl{fill:var(--ink)}
-.jn.done .jl{fill:var(--ink2)}
-.jcap{font-size:12.5px;color:var(--ink2);margin-top:12px;line-height:1.5;padding-top:10px;
-  border-top:.5px solid var(--line)}
+/* route timeline — the journey card */
+.card.route{padding:20px 18px}
+.rlist{display:flex;flex-direction:column;gap:0;margin-top:4px}
+.rstop{display:grid;grid-template-columns:24px 1fr;column-gap:14px;position:relative;
+  padding:8px 4px 18px 0;text-align:left;background:none;border:0;color:inherit;
+  font:inherit;width:100%;cursor:pointer}
+.rstop:last-child{padding-bottom:2px}
+.rdot{grid-column:1;grid-row:1/span 3;position:relative;width:24px;
+  display:flex;align-items:flex-start;justify-content:center;padding-top:6px}
+.rdot .rd-in{width:12px;height:12px;border-radius:50%;background:var(--bg);
+  border:2px solid var(--ink3);transition:all .3s var(--ease);position:relative;z-index:2}
+.rline{grid-column:1;grid-row:2/span 3;position:relative;width:24px;
+  display:flex;justify-content:center}
+.rline::before{content:"";position:absolute;top:-4px;bottom:-20px;width:2px;
+  background:var(--line);border-radius:2px}
+.rstop:last-child .rline::before{display:none}
+.rbody{grid-column:2;grid-row:1/span 3;min-width:0}
+.rhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rnm{font-family:var(--sys);font-size:17px;font-weight:600;color:var(--ink);
+  letter-spacing:-.015em}
+.rdt{font-family:var(--mono);font-size:10.5px;color:var(--ink3);letter-spacing:.06em;
+  text-transform:uppercase;margin-left:auto}
+.rsub{font-size:13.5px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.rmeta{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:.04em;
+  margin-top:5px;display:inline-flex;align-items:center;gap:6px}
+.rmeta svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6;flex:0 0 12px}
+
+/* state variants */
+.rstop.done .rd-in{background:var(--dawn);border-color:var(--dawn)}
+.rstop.done .rline::before{background:linear-gradient(to bottom,var(--dawn) 0%,var(--dawn) 40%,var(--line) 100%)}
+.rstop.done .rnm{color:var(--ink2)}
+.rstop.active .rd-in{background:var(--dawn);border-color:var(--dawn);
+  box-shadow:0 0 0 4px rgba(79,214,156,.15)}
+.rstop.active .rnm{color:var(--dawn)}
+.rstop.next .rd-in{border-color:var(--dusk);background:var(--bg)}
+.rstop.next .rnm{color:var(--ink)}
+.rd-ring{position:absolute;top:6px;left:6px;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--dawn);animation:rring 2.2s var(--ease) infinite;z-index:1}
+.rstop.next .rd-ring{border-color:var(--dusk)}
+@keyframes rring{0%{opacity:.6;transform:scale(1)}70%{opacity:0;transform:scale(2.6)}100%{opacity:0;transform:scale(2.6)}}
+.rstop.future{opacity:.7}
+.rstop:hover{background:rgba(255,255,255,.02)}
+.rstop:active{transform:none}
 .drow{display:flex;align-items:center;gap:14px;padding:14px 2px;border-bottom:.5px solid var(--line);width:100%;text-align:left}
 .drow:last-child{border-bottom:0}
 .drow .dt{font-family:var(--mono);font-size:10.5px;color:var(--ink3);width:44px;flex:0 0 44px;line-height:1.5;letter-spacing:.02em}
@@ -399,8 +418,7 @@ ul.pl strong{color:var(--ink);font-weight:600}
 .dish{background:var(--card2);border:.5px solid var(--line);border-radius:12px;padding:12px 14px}
 .dish .dn{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink);
   letter-spacing:-.015em;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.dish .dg{font-family:var(--sys);font-size:11.5px;color:var(--ink3);font-weight:400;
-  font-style:italic}
+.dish .dg{font-family:var(--sys);font-size:11.5px;color:var(--ink3);font-weight:400}
 .dish .dp{font-family:var(--mono);font-size:10.5px;color:var(--gold);letter-spacing:.06em;
   margin-top:2px}
 .dish .dd{font-size:14px;color:var(--ink2);margin-top:6px;line-height:1.5}

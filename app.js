@@ -70,74 +70,54 @@ function smoothPath(pts){
   return d;
 }
 
-/* ---------- the journey map ---------- */
-/* geographic-style layout: each leg placed by rough lat/lon.
-   viewBox 380x260, lon 3..16 → x 20..360, lat 47..69 → y 20..240 */
+/* ---------- the journey — vertical route timeline ---------- */
+/* Clean, unambiguous. Each leg is a stop; each transition shows mode + duration.
+   No map projections; nothing overlapping. */
 function journeyMap(){
   const here = currentLegIndex();
-  // leg → [lat, lon] anchor (representative city of each leg)
-  const GEO = [
-    [55.7, 12.6],  // Copenhagen
-    [67.9, 13.1],  // Lofoten (Reine)
-    [60.4,  5.3],  // Bergen / fjords
-    [47.6, 10.7],  // Alps / Neuschwanstein
-    [50.1, 14.4],  // Bohemia / Prague
-    [55.7, 12.6],  // Copenhagen return
+  // one-line data per leg: [short name, from-day idx, to-day idx, transport-icon-name]
+  // transport icon = how you REACH this leg (from the previous one)
+  const STOPS = [
+    { nm:'Copenhagen',        from:0,  to:1,  in:'fly',  sub:'Arrival · Nyhavn, the zoo' },
+    { nm:'Lofoten',           from:2,  to:6,  in:'fly',  sub:'Arctic islands · Reine, Hamnøy, Henningsvær' },
+    { nm:'Oslo → Bergen',     from:7,  to:9,  in:'rail', sub:'Fjords · Bergensbanen, Nærøyfjord' },
+    { nm:'Aurland',           from:10, to:11, in:'car',  sub:'Nærøyfjord & Stegastein' },
+    { nm:'Bavaria / Alps',    from:12, to:13, in:'fly',  sub:'Neuschwanstein · Hallstatt' },
+    { nm:'Bohemia',           from:14, to:16, in:'car',  sub:'Krumlov · Prague' },
+    { nm:'Dresden',           from:17, to:18, in:'car',  sub:'Elbe skyline · Frauenkirche' },
+    { nm:'Copenhagen',        from:19, to:20, in:'fly',  sub:'Rest day · Tivoli · home' },
   ];
-  const px = lon => 20 + (lon - 3)*(340/13);
-  const py = lat => 20 + (69 - lat)*(220/22);
-  const pts = GEO.map(([la,lo]) => [+px(lo).toFixed(1), +py(la).toFixed(1)]);
-  // latitude grid lines
-  let grid = '';
-  [50, 55, 60, 65].forEach(la => {
-    const y = py(la);
-    grid += `<line x1="14" y1="${y}" x2="374" y2="${y}" stroke="var(--line)" stroke-width=".5" stroke-dasharray="2 4" opacity=".5"/>`;
-    grid += `<text x="18" y="${y-3}" fill="var(--ink3)" font-family="var(--mono)" font-size="8" opacity=".6">${la}°N</text>`;
-  });
-  // twinkling stars (deterministic — same each render)
-  let stars = '';
-  const S = [[42,32,.7],[95,18,.4],[168,42,.6],[240,26,.5],[312,54,.7],[356,110,.4],
-             [30,138,.5],[110,196,.4],[210,210,.6],[318,190,.5],[300,90,.3]];
-  S.forEach(([x,y,o],i)=>{
-    stars += `<circle cx="${x}" cy="${y}" r="1" fill="#ffffff" opacity="${o}"><animate attributeName="opacity" values="${o};${o*.3};${o}" dur="${3+i%3}s" repeatCount="indefinite"/></circle>`;
-  });
-  const routePath = smoothPath(pts);
-  const activeLen = here>0 ? here/(pts.length-1) : 0;
-  // pin nodes
-  let g = '';
-  pts.forEach(([x,y],i)=>{
-    const l = LEGS[i], done = here>i, active = here===i, next = here<0 && i===0;
-    const big = active || next;
-    const col = l.accent;
-    g += `<g class="jn ${done?'done':active?'active':next?'next':'future'}" style="--a:${col}" onclick="openDay(${l.from})">`;
-    if (big) g += `<circle class="ring" cx="${x}" cy="${y}" r="8"/>`;
-    g += `<circle cx="${x}" cy="${y}" r="${big?6.5:4.5}"/>`;
-    // label — alternating above/below to reduce collisions
-    const ly = y + (i%2 ? 20 : -12);
-    g += `<text class="jl" x="${x}" y="${ly}">${esc(l.short)}</text>`;
-    g += `<text class="jd" x="${x}" y="${ly+9}">${dateShort(DATA.days[l.from])}</text>`;
-    g += `</g>`;
-  });
-  const cap = here<0
-    ? 'The whole arc — Copenhagen up to the Arctic, then south through the fjords, the Alps, Bohemia and home.'
-    : 'You’re on the '+esc(legOf(currentIndex()).name)+' leg.';
-  return `<div class="card jmap fade"><div class="lab">${I.rail}The journey</div>
-    <svg viewBox="0 0 388 260" class="jsvg" aria-hidden="true">
-      <defs>
-        <linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="var(--dawn)"/>
-          <stop offset=".55" stop-color="var(--fjord)"/>
-          <stop offset="1" stop-color="var(--gold)"/>
-        </linearGradient>
-      </defs>
-      ${grid}
-      ${stars}
-      <path class="jpath base" d="${routePath}"/>
-      <path class="jpath animate" d="${routePath}" pathLength="1"
-        style="stroke-dasharray:1;stroke-dashoffset:${(1-Math.max(activeLen,0.001)).toFixed(3)}"/>
-      ${g}
-    </svg>
-    <div class="jcap">${cap}</div></div>`;
+  // determine which stop the current day belongs to
+  const cIdx = currentIndex();
+  const curStop = cIdx < 0 ? -1
+    : STOPS.findIndex(s => cIdx >= s.from && cIdx <= s.to);
+  // format date range from-to
+  const rangeOf = s => {
+    const d1 = DATA.days[s.from], d2 = DATA.days[s.to];
+    const short = d => d.date.replace(/^\w+\s/, '');
+    return s.from === s.to ? short(d1) : short(d1) + ' – ' + short(d2);
+  };
+  const stops = STOPS.map((s, i) => {
+    const done = curStop > i, active = curStop === i, next = cIdx < 0 && i === 0;
+    const cls = done ? 'done' : active ? 'active' : next ? 'next' : 'future';
+    const nights = s.to - s.from + 1;
+    return `<button class="rstop ${cls}" onclick="openDay(${s.from})">
+      <div class="rdot"><span class="rd-in"></span>${active||next?'<span class="rd-ring"></span>':''}</div>
+      <div class="rline"></div>
+      <div class="rbody">
+        <div class="rhead">
+          <span class="rnm">${esc(s.nm)}</span>
+          <span class="rdt">${esc(rangeOf(s))}</span>
+        </div>
+        <div class="rsub">${esc(s.sub)}</div>
+        <div class="rmeta">${nights} night${nights>1?'s':''}${i>0?' · '+I[s.in]+' from '+esc(STOPS[i-1].nm.split(' ')[0]):''}</div>
+      </div>
+    </button>`;
+  }).join('');
+  return `<div class="card route fade">
+    <div class="lab">${I.rail}The journey</div>
+    <div class="rlist">${stops}</div>
+  </div>`;
 }
 
 /* ---------- phases (groups a day's parts by time of day) ---------- */
@@ -238,7 +218,9 @@ function timeline(d){
 }
 
 /* ---------- hero ---------- */
-function heroFor(d, idx){
+/* includeSun defaults false — the day-view glance strip carries the times,
+   so the hero doesn't need to duplicate them */
+function heroFor(d, idx, includeSun){
   const leg = legOf(idx);
   return `<div class="hero fade" style="--accent:${leg.accent}">
     <div class="eyebrow"><span>${esc(d.date)}</span><span class="dot"></span>
@@ -248,10 +230,10 @@ function heroFor(d, idx){
       <span class="chip ${d.car?'car':'nocar'}">${d.car?I.car:I.nocar}${d.car?'Car':'No car'}</span>
       ${d.drive?`<span class="chip drive">${d.drive} drive</span>`:''}
       ${d.transport?`<span class="chip ${d.transport.kind}">${I[d.transport.kind]}${esc(d.transport.text)}</span>`:''}
-      <span class="chip sun">
+      ${includeSun ? `<span class="chip sun">
         <span class="s-r">${I.rise}${esc(d.rise||'—')}</span>
         <span class="s-s">${I.set}${esc(d.set||'—')}</span>
-      </span>
+      </span>`:''}
     </div>
     <div class="stay">${I.bed}<span>Tonight · <b>${esc(d.stay)}</b></span></div>
     ${sceneSVG(leg.scene,'scene')}
@@ -302,7 +284,8 @@ function vToday(){
     h += actionsCard();
   } else {
     const d = DATA.days[idx];
-    h += heroFor(d, idx);
+    // include sun chip in hero here — no glance strip on this view
+    h += heroFor(d, idx, true);
     h += journeyMap();
     h += timeline(d);
     const nx = DATA.days[idx+1];

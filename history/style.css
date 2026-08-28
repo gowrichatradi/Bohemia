@@ -1,13 +1,13 @@
 /* Shared style for the per-day background & specials pages.
    Palette echoes the main app; typography reads like a printed page. */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
   --bg:#0B0F13; --bg2:#121A20; --card:#161F25; --card2:#1D282F; --line:#26333A;
   --ink:#F2F5F6; --ink2:#95A6AD; --ink3:#5F727A;
   --dawn:#4FD69C; --dusk:#E8A860; --fjord:#6BB6CE; --gold:#D9A441; --kid:#B79AE6;
   --cinema:#E8735A;
   --sys:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
-  --serif:'Instrument Serif',ui-serif,"New York",Georgia,serif;
+  --serif:'Inter',-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,"SF Mono",Menlo,monospace;
   --safe-t:env(safe-area-inset-top);
   --safe-b:env(safe-area-inset-bottom);
@@ -37,15 +37,12 @@ a{color:var(--fjord)}
 header.pg{margin-bottom:22px}
 .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--gold);margin-bottom:8px}
-h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.022em;
-  font-weight:400;font-style:italic;margin:0 0 12px}
-.lede{color:var(--ink2);font-size:16.5px;line-height:1.55;margin:0;font-family:var(--serif);
-  font-style:italic}
+h1{font-family:var(--sys);font-size:32px;line-height:1.15;letter-spacing:-.028em;font-weight:700;margin:0 0 12px;color:var(--ink)}
+.lede{color:var(--ink2);font-size:16.5px;line-height:1.55;margin:0;font-family:var(--sys);font-weight:400}
 .place{background:var(--card);border:.5px solid var(--line);border-radius:16px;
   padding:18px 20px;margin:14px 0;
   box-shadow:0 12px 30px -18px rgba(0,0,0,.5)}
-.place h2{font-family:var(--serif);font-size:24px;letter-spacing:-.015em;margin:0 0 4px;
-  font-weight:400}
+.place h2{font-family:var(--sys);font-size:20px;letter-spacing:-.018em;margin:0 0 4px;font-weight:600;color:var(--ink)}
 .place .meta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink3);margin:0 0 10px}
 .place p{margin:8px 0;color:var(--ink2);font-size:15px;line-height:1.55}
@@ -64,10 +61,7 @@ h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.022
   margin-top:22px;padding-top:14px;border-top:.5px solid var(--line);text-align:center}
 
 /* did-you-know trivia strip — a light pull-quote sitting just under the lede */
-.trivia{background:linear-gradient(160deg,rgba(107,182,206,.09),rgba(217,164,65,.05));
-  border:.5px solid var(--line);border-radius:14px;padding:14px 18px;margin:16px 0 4px;
-  position:relative;font-family:var(--serif);font-style:italic;font-size:15px;
-  line-height:1.55;color:var(--ink)}
+.trivia{background:linear-gradient(160deg,rgba(107,182,206,.09),rgba(217,164,65,.05));border:.5px solid var(--line);border-radius:14px;padding:14px 18px;margin:16px 0 4px;position:relative;font-family:var(--sys);font-size:14.5px;line-height:1.55;color:var(--ink2);font-weight:400}
 .trivia b{font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--fjord);display:block;margin-bottom:6px;font-weight:500}
 
@@ -80,8 +74,7 @@ h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.022
 .movies .lab::before{content:"◉";font-size:10px}
 .movies .flick{margin:0 0 14px;padding-bottom:14px;border-bottom:.5px solid var(--line)}
 .movies .flick:last-child{margin-bottom:0;padding-bottom:0;border-bottom:0}
-.movies h3{font-family:var(--serif);font-size:20px;font-weight:400;letter-spacing:-.015em;
-  margin:0 0 2px;color:var(--ink)}
+.movies h3{font-family:var(--sys);font-size:17px;font-weight:600;letter-spacing:-.015em;margin:0 0 2px;color:var(--ink)}
 .movies .yr{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink3);
   text-transform:uppercase;margin-bottom:6px}
 .movies p{color:var(--ink2);font-size:14.5px;margin:0;line-height:1.55}
