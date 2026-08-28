@@ -22,7 +22,8 @@ const I = {
   copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>',
   chev:'<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
   bed:'<svg viewBox="0 0 24 24"><path d="M3 18v-6a2 2 0 012-2h14a2 2 0 012 2v6M3 14h18M3 18v2M21 18v2M6 10V8a1 1 0 011-1h3a1 1 0 011 1v2"/></svg>',
-  kite:'<svg viewBox="0 0 24 24"><path d="M12 3.4c2.8 0 4.7 2.2 4.7 5 0 3.4-3 6.2-4.7 6.8-1.7-.6-4.7-3.4-4.7-6.8 0-2.8 1.9-5 4.7-5zM12 15.2v2.4M10.7 21c.2-1.5 2.4-1.5 2.6 0"/></svg>'
+  kite:'<svg viewBox="0 0 24 24"><path d="M12 3.4c2.8 0 4.7 2.2 4.7 5 0 3.4-3 6.2-4.7 6.8-1.7-.6-4.7-3.4-4.7-6.8 0-2.8 1.9-5 4.7-5zM12 15.2v2.4M10.7 21c.2-1.5 2.4-1.5 2.6 0"/></svg>',
+  pin:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-7.5-7-12a7 7 0 0114 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>'
 };
 
 /* ---------- legs (groups the 19 days into regions) ---------- */
@@ -721,12 +722,19 @@ const TAG_CLASS = {Booked:'t-ok', Open:'t-open', Act:'t-act', Cancel:'t-act', Se
 function bookingRows(rows){
   return rows.map(r=>{
     const tg = TAG_CLASS[r.tag] || 't-act';
+    const addrBtn = r.addr
+      ? `<button class="ref addr" onclick="copyAddr(${JSON.stringify(r.addr).replace(/"/g,'&quot;')})">${I.pin||I.copy}${esc(r.addr)}</button>`
+      : '';
     return `<div class="bk"><div class="w">${esc(r.when||'').split('\n').join('<br>')}</div>
       <div class="b"><div class="n">${esc(r.name)}</div>
       ${r.detail?`<div class="d">${fmt(r.detail)}</div>`:''}
       ${r.ref?`<button class="ref" onclick="copyRef('${esc(r.ref.split(' ')[0])}')">${I.copy}${esc(r.ref)}</button>`:''}
+      ${addrBtn}
       </div>${r.tag?`<span class="tag ${tg}">${esc(r.tag)}</span>`:''}</div>`;
   }).join('');
+}
+function copyAddr(addr){
+  navigator.clipboard?.writeText(addr).then(()=>toast('Address copied')).catch(()=>toast(addr));
 }
 function bookGroup(head){ return DATA.bookings.find(g => g.head===head || (head instanceof RegExp && head.test(g.head))); }
 
