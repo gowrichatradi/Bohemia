@@ -116,8 +116,59 @@ function journeyMap(){
   }).join('');
   return `<div class="card route fade">
     <div class="lab">${I.rail}The journey</div>
+    <div class="jmap-real" id="jmap-real"></div>
     <div class="rlist">${stops}</div>
   </div>`;
+}
+
+/* Real-earth map using Leaflet + CARTO Dark Matter tiles.
+   Runs after each render() when the container is present. */
+const MAP_STOPS = [
+  { c:[55.68,12.57], nm:'Copenhagen',    dt:'28 Sep · arrival',   idx:0  },
+  { c:[67.93,13.08], nm:'Reine · Lofoten', dt:'30 Sep – 4 Oct',   idx:2  },
+  { c:[68.23,14.57], nm:'Svolvær',       dt:'3–4 Oct',            idx:5  },
+  { c:[59.91,10.75], nm:'Oslo',          dt:'5 Oct',              idx:7  },
+  { c:[60.39, 5.32], nm:'Bergen',        dt:'6–7 Oct',            idx:8  },
+  { c:[60.90, 7.19], nm:'Aurland',       dt:'8 Oct',              idx:10 },
+  { c:[47.56,10.75], nm:'Neuschwanstein',dt:'10 Oct',             idx:12 },
+  { c:[47.56,13.65], nm:'Hallstatt',     dt:'11 Oct',             idx:13 },
+  { c:[48.81,14.32], nm:'Český Krumlov', dt:'12 Oct',             idx:14 },
+  { c:[50.08,14.44], nm:'Prague',        dt:'13–14 Oct',          idx:15 },
+  { c:[51.05,13.74], nm:'Dresden',       dt:'15–16 Oct',          idx:17 },
+  { c:[52.36,13.50], nm:'Berlin BER',    dt:'16 Oct · flight out',idx:18 },
+  { c:[55.68,12.57], nm:'Copenhagen',    dt:'17 Oct · rest, home',idx:19 },
+];
+function initJourneyMap(){
+  if (!window.L) return;
+  const el = document.getElementById('jmap-real');
+  if (!el || el._tpMap) return;
+  const map = L.map(el, {
+    zoomControl:true, scrollWheelZoom:false, dragging:true,
+    tap:true, worldCopyJump:false, attributionControl:true,
+    minZoom:3, maxZoom:9
+  });
+  el._tpMap = map;
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    subdomains:'abcd', maxZoom:19,
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OSM</a>, © <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+  // Route polyline in order
+  const line = L.polyline(MAP_STOPS.map(s=>s.c), {
+    color:'#4FD69C', weight:2.5, opacity:.85, dashArray:'4 6', lineJoin:'round'
+  }).addTo(map);
+  // Markers
+  const cIdx = currentIndex();
+  MAP_STOPS.forEach(s => {
+    const active = cIdx >= 0 && cIdx === s.idx;
+    const icon = L.divIcon({
+      className:'', html:`<div class="tp-pin${active?' active':''}"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7]
+    });
+    L.marker(s.c, {icon}).addTo(map)
+      .bindPopup(`<b>${s.nm}</b>${s.dt}`);
+  });
+  // Fit bounds — Northern Europe bounding box on the route
+  map.fitBounds(MAP_STOPS.map(s=>s.c), { padding:[24,24], maxZoom:5 });
 }
 
 /* ---------- phases (groups a day's parts by time of day) ---------- */
@@ -559,6 +610,11 @@ function render(){
   $('tSub').textContent = idx>=0 ? DATA.days[idx].date+' · day '+(idx+1)+' of '+DATA.days.length
     : (daysUntil()>0 ? daysUntil()+' days to go' : '28 Sep – 18 Oct 2026');
   $('progBar').style.width = (tripProgress()*100).toFixed(1)+'%';
+  // real-earth map — init or re-init as needed
+  if (document.getElementById('jmap-real')) {
+    // small delay so the container has laid out
+    requestAnimationFrame(() => initJourneyMap());
+  }
   // top-bar progress ring
   const p = tripProgress();
   const pr = $('pringFg'); if (pr) pr.style.strokeDashoffset = (1 - p).toFixed(3);
