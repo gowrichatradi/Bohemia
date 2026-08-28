@@ -1,4 +1,4 @@
-const CACHE = 'arctic-alpine-v22';
+const CACHE = 'arctic-alpine-v23';
 const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png',
                 './history/style.css',
@@ -8,7 +8,14 @@ const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./mani
                 './history/day-10.html','./history/day-11.html','./history/day-12.html',
                 './history/day-13.html','./history/day-14.html','./history/day-15.html',
                 './history/day-16.html','./history/day-17.html','./history/day-18.html',
-                './history/day-19.html','./history/day-20.html','./history/day-21.html'];
+                './history/day-19.html','./history/day-20.html','./history/day-21.html',
+                './images/day-01.jpg','./images/day-02.jpg','./images/day-03.jpg',
+                './images/day-04.jpg','./images/day-05.jpg','./images/day-06.jpg',
+                './images/day-07.jpg','./images/day-08.jpg','./images/day-09.jpg',
+                './images/day-10.jpg','./images/day-11.jpg','./images/day-12.jpg',
+                './images/day-13.jpg','./images/day-14.jpg','./images/day-15.jpg',
+                './images/day-16.jpg','./images/day-17.jpg','./images/day-18.jpg',
+                './images/day-19.jpg','./images/day-20.jpg','./images/day-21.jpg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
