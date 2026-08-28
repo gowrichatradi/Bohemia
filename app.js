@@ -354,6 +354,58 @@ function vToday(){
   }
   return h;
 }
+/* ---------- daylight helpers ---------- */
+function toMin(hm){
+  if (!hm) return null;
+  const m = hm.match(/^(\d{1,2}):(\d{2})$/);
+  return m ? +m[1]*60 + +m[2] : null;
+}
+function daylightBetween(rise, set){
+  const r = toMin(rise), s = toMin(set);
+  if (r == null || s == null || s <= r) return null;
+  const t = s - r;
+  return { h: Math.floor(t/60), m: t%60, riseMin:r, setMin:s };
+}
+function sunArc(rise, set, dl){
+  // sun position: current time if today, else midway
+  const idx = currentIndex();
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const dayIdx = DATA.days.findIndex(dy => dy.date === DATA.days[idx]?.date);
+  const useCurrent = idx >= 0 && dl && nowMin > dl.riseMin && nowMin < dl.setMin;
+  const frac = useCurrent
+    ? (nowMin - dl.riseMin) / (dl.setMin - dl.riseMin)
+    : 0.5;   // midday if no current time
+  // arc from (30,60) to (270,60) with apex at (150,4)
+  const t = frac;
+  // quadratic bezier P0(30,60) P1(150,-30) P2(270,60)
+  const sx = (1-t)*(1-t)*30 + 2*(1-t)*t*150 + t*t*270;
+  const sy = (1-t)*(1-t)*60 + 2*(1-t)*t*(-30) + t*t*60;
+  return `<div class="sun-arc">
+    <svg viewBox="0 0 300 70" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="sarc-${idx}" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="var(--dawn)" stop-opacity=".55"/>
+          <stop offset=".5" stop-color="var(--gold)" stop-opacity=".8"/>
+          <stop offset="1" stop-color="var(--dusk)" stop-opacity=".55"/>
+        </linearGradient>
+        <radialGradient id="sun-${idx}" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#FFEBB3"/>
+          <stop offset=".7" stop-color="var(--gold)"/>
+          <stop offset="1" stop-color="var(--gold)" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <line x1="18" y1="60" x2="282" y2="60" stroke="var(--line)" stroke-width=".5" stroke-dasharray="2 4"/>
+      <path d="M30 60 Q150 -30 270 60" stroke="url(#sarc-${idx})" stroke-width="1.6" fill="none"/>
+      <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="8" fill="url(#sun-${idx})"/>
+      <circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="3.5" fill="#FFEBB3"/>
+      <text x="30" y="70" fill="var(--ink3)" font-family="var(--mono)" font-size="9" text-anchor="middle">${esc(rise)}</text>
+      <text x="270" y="70" fill="var(--ink3)" font-family="var(--mono)" font-size="9" text-anchor="middle">${esc(set)}</text>
+    </svg>
+    <div class="daylight"><span>${dl.h}<b>h</b> ${dl.m.toString().padStart(2,'0')}<b>m</b></span> of daylight${useCurrent?' · sun is up now':''}</div>
+  </div>`;
+}
+
 /* Aurora viewing teaser — shown on Lofoten days.
    Static advice; no external API dependency required. */
 function auroraCard(d){
@@ -420,12 +472,23 @@ function vDay(i){
   const prev = DATA.days[i-1], next = DATA.days[i+1];
   const dayNum = String(i+1).padStart(2,'0');
   const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 0 2px">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
-  // at-a-glance strip
-  const drive = d.drive || (d.transport ? d.transport.kind.toUpperCase() : '—');
-  const glance = `<div class="glance fade">
-    <div class="g"><div class="l">Move</div><div class="v">${esc(drive)}</div></div>
-    <div class="g"><div class="l">Sunrise</div><div class="v">${esc(d.rise||'—')}</div></div>
-    <div class="g"><div class="l">Sunset</div><div class="v">${esc(d.set||'—')}</div></div>
+  // at-a-glance strip with sun arc
+  const moveLabel = d.transport ? d.transport.kind.toUpperCase()
+                   : (d.drive && !/^no/i.test(d.drive)) ? d.drive.replace(/\s*drive$/,'')
+                   : '—';
+  const moveIcon = d.transport ? I[d.transport.kind] : (d.car ? I.car : I.nocar);
+  // daylight duration
+  const dl = daylightBetween(d.rise, d.set);
+  const glance = `<div class="glance-card fade">
+    <div class="glance">
+      <div class="g g-move"><div class="g-icon">${moveIcon}</div>
+        <div class="g-v">${esc(moveLabel)}</div><div class="g-l">Move</div></div>
+      <div class="g g-rise"><div class="g-icon">${I.rise}</div>
+        <div class="g-v">${esc(d.rise||'—')}</div><div class="g-l">Sunrise</div></div>
+      <div class="g g-set"><div class="g-icon">${I.set}</div>
+        <div class="g-v">${esc(d.set||'—')}</div><div class="g-l">Sunset</div></div>
+    </div>
+    ${dl ? sunArc(d.rise, d.set, dl) : ''}
   </div>`;
   // aurora teaser on Lofoten leg days (index 2..7 → Reine and Svolvær)
   const isLofoten = i>=2 && i<=6;
