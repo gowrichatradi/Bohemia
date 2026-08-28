@@ -456,6 +456,23 @@ ul.pl strong{color:var(--ink);font-weight:600}
   margin-top:2px}
 .dish .dd{font-size:14px;color:var(--ink2);margin-top:6px;line-height:1.5}
 
+/* ===== compact inline sun-bar in the hero ===== */
+.sunline{display:flex;align-items:center;gap:8px;margin-top:12px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink3)}
+.sun-t{display:inline-flex;align-items:center;gap:4px;color:var(--ink2);
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
+.sun-t.rise{color:var(--dawn)}
+.sun-t.set{color:var(--dusk)}
+.sun-i{display:inline-flex;width:11px;height:11px}
+.sun-i svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.sun-track{flex:1;height:2px;position:relative;border-radius:2px;min-width:40px;
+  background:linear-gradient(90deg,var(--dawn) 0%,var(--gold) 50%,var(--dusk) 100%);opacity:.4}
+.sun-dot{position:absolute;top:50%;transform:translate(-50%,-50%);
+  width:8px;height:8px;border-radius:50%;background:var(--gold);
+  box-shadow:0 0 6px rgba(217,164,65,.6)}
+.sun-dur{margin-left:auto;color:var(--gold);white-space:nowrap;flex:0 0 auto}
+
 /* ===== at-a-glance summary strip (day view) — compact ===== */
 .glance-card{background:linear-gradient(160deg,var(--card) 0%,var(--bg2) 100%);
   border:.5px solid var(--line);border-radius:14px;padding:10px 10px 8px;margin:2px auto 14px;

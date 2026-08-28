@@ -274,10 +274,24 @@ function timeline(d){
 }
 
 /* ---------- hero ---------- */
-/* includeSun defaults false — the day-view glance strip carries the times,
-   so the hero doesn't need to duplicate them */
+/* includeSun renders a compact inline sun-bar (rise · arc · set · daylight) */
 function heroFor(d, idx, includeSun){
   const leg = legOf(idx);
+  const dl = includeSun ? daylightBetween(d.rise, d.set) : null;
+  let sunBar = '';
+  if (includeSun) {
+    // sun-dot position along the bar — live if this is today, else midday
+    const cIdx = currentIndex();
+    const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+    const live = cIdx === idx && dl && nowMin > dl.riseMin && nowMin < dl.setMin;
+    const frac = live ? (nowMin - dl.riseMin) / (dl.setMin - dl.riseMin) : 0.5;
+    sunBar = `<div class="sunline">
+      <span class="sun-t rise"><span class="sun-i">${I.rise}</span>${esc(d.rise||'—')}</span>
+      <span class="sun-track"><span class="sun-dot" style="left:${(frac*100).toFixed(1)}%"></span></span>
+      <span class="sun-t set">${esc(d.set||'—')}<span class="sun-i">${I.set}</span></span>
+      ${dl ? `<span class="sun-dur">${dl.h}h&nbsp;${dl.m.toString().padStart(2,'0')}m</span>` : ''}
+    </div>`;
+  }
   return `<div class="hero fade" style="--accent:${leg.accent}">
     <div class="eyebrow"><span>${esc(d.date)}</span><span class="dot"></span>
       <span class="leg-tag">${esc(leg.name)}</span></div>
@@ -286,11 +300,8 @@ function heroFor(d, idx, includeSun){
       <span class="chip ${d.car?'car':'nocar'}">${d.car?I.car:I.nocar}${d.car?'Car':'No car'}</span>
       ${d.drive?`<span class="chip drive">${d.drive} drive</span>`:''}
       ${d.transport?`<span class="chip ${d.transport.kind}">${I[d.transport.kind]}${esc(d.transport.text)}</span>`:''}
-      ${includeSun ? `<span class="chip sun">
-        <span class="s-r">${I.rise}${esc(d.rise||'—')}</span>
-        <span class="s-s">${I.set}${esc(d.set||'—')}</span>
-      </span>`:''}
     </div>
+    ${sunBar}
     <div class="stay">${I.bed}<span>Tonight · <b>${esc(d.stay)}</b></span></div>
     ${sceneSVG(leg.scene,'scene')}
   </div>`;
@@ -472,29 +483,12 @@ function vDay(i){
   const prev = DATA.days[i-1], next = DATA.days[i+1];
   const dayNum = String(i+1).padStart(2,'0');
   const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 0 2px">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
-  // at-a-glance strip with sun arc
-  const moveLabel = d.transport ? d.transport.kind.toUpperCase()
-                   : (d.drive && !/^no/i.test(d.drive)) ? d.drive.replace(/\s*drive$/,'')
-                   : '—';
-  const moveIcon = d.transport ? I[d.transport.kind] : (d.car ? I.car : I.nocar);
-  // daylight duration
-  const dl = daylightBetween(d.rise, d.set);
-  const glance = `<div class="glance-card fade">
-    <div class="glance">
-      <div class="g g-move"><div class="g-icon">${moveIcon}</div>
-        <div class="g-v">${esc(moveLabel)}</div><div class="g-l">Move</div></div>
-      <div class="g g-rise"><div class="g-icon">${I.rise}</div>
-        <div class="g-v">${esc(d.rise||'—')}</div><div class="g-l">Sunrise</div></div>
-      <div class="g g-set"><div class="g-icon">${I.set}</div>
-        <div class="g-v">${esc(d.set||'—')}</div><div class="g-l">Sunset</div></div>
-    </div>
-    ${dl ? sunArc(d.rise, d.set, dl) : ''}
-  </div>`;
-  // aurora teaser on Lofoten leg days (index 2..7 → Reine and Svolvær)
+  // aurora teaser on Lofoten leg days (index 2..6 → Reine and Svolvær)
   const isLofoten = i>=2 && i<=6;
   const aurora = isLofoten ? auroraCard(d) : '';
+  // sun info is now inline in the hero itself (includeSun=true)
   let h = `<button class="back" onclick="backToDays()">${I.chev}All days</button>`
-    + heroFor(d, i) + glance + histLink + aurora + timeline(d);
+    + heroFor(d, i, true) + histLink + aurora + timeline(d);
   h += `<div class="daynav">`
     + (prev?`<button onclick="navigateDay(-1)"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
     + (next?`<button class="nx" onclick="navigateDay(1)"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)
