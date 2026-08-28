@@ -39,13 +39,21 @@ body{
   letter-spacing:-.005em;
   font-feature-settings:"ss01","cv11";
 }
-/* fixed backdrop glow — a hint of aurora behind everything */
+/* fixed backdrop glow — a hint of sky behind everything.
+   #4 the sky's colour comes from CSS vars set by JS every 10 minutes
+   based on the current hour of the day at the destination */
+body{
+  --sky-a:rgba(79,214,156,.13);   /* top-left glow, default: dawn/aurora green */
+  --sky-b:rgba(107,182,206,.10);  /* top-right glow, default: fjord blue */
+  --sky-c:rgba(217,164,65,.06);   /* bottom-center warm */
+}
 body::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  transition:background 4s ease;
   background:
-    radial-gradient(140% 65% at 12% -8%, rgba(79,214,156,.13), transparent 60%),
-    radial-gradient(120% 55% at 92% 2%, rgba(107,182,206,.10), transparent 55%),
-    radial-gradient(90% 55% at 50% 105%, rgba(217,164,65,.06), transparent 60%);
+    radial-gradient(140% 65% at 12% -8%, var(--sky-a), transparent 60%),
+    radial-gradient(120% 55% at 92% 2%, var(--sky-b), transparent 55%),
+    radial-gradient(90% 55% at 50% 105%, var(--sky-c), transparent 60%);
 }
 #app{padding:calc(var(--safe-t) + 8px) 0 calc(82px + var(--safe-b))}
 .wrap{padding:0 18px;max-width:640px;margin:0 auto}
@@ -105,6 +113,20 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
   background:linear-gradient(155deg,#1B2A32 0%,#141F26 58%,#121A20 100%);
   border:.5px solid var(--line);
   box-shadow:0 24px 60px -30px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.03) inset}
+/* #7 region-color signature stripe at the very top of every hero */
+.hero::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent 0%,var(--accent) 15%,var(--accent) 85%,transparent 100%);
+  opacity:.85;pointer-events:none;z-index:2;
+  box-shadow:0 0 12px color-mix(in srgb,var(--accent) 55%,transparent)}
+/* hero cover photo layer — see #1 */
+.hero-cover{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;
+  opacity:0;transition:opacity 1.2s var(--ease)}
+.hero.has-cover .hero-cover{opacity:.4}
+.hero.has-cover::before{opacity:.75;
+  background:
+    radial-gradient(60% 90% at 20% 100%, rgba(11,15,19,.92), transparent 60%),
+    linear-gradient(180deg, rgba(11,15,19,.35) 0%, rgba(11,15,19,.85) 85%)}
+.hero.has-cover .scene{opacity:.25}
 .hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150%;z-index:0;
   pointer-events:none;opacity:.6;
   background:
@@ -472,6 +494,34 @@ ul.pl strong{color:var(--ink);font-weight:600}
   width:8px;height:8px;border-radius:50%;background:var(--gold);
   box-shadow:0 0 6px rgba(217,164,65,.6)}
 .sun-dur{margin-left:auto;color:var(--gold);white-space:nowrap;flex:0 0 auto}
+/* #6 moon phase pill (right of sun-bar or below) */
+.moon-pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.06em;color:var(--ink3);margin-top:8px}
+.moon-pill .moon-svg{width:14px;height:14px;flex:0 0 14px}
+.moon-pill b{color:var(--ink2);font-weight:500}
+.moon-pill .pct{color:var(--ink3);font-weight:400}
+
+/* #5 live aurora Kp indicator inside the aurora-card */
+.kp-live{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.06em;margin-top:6px;padding:5px 10px;border-radius:8px;
+  background:rgba(255,255,255,.06);color:var(--ink2)}
+.kp-live .kp-dot{width:8px;height:8px;border-radius:50%;background:var(--ink3);
+  box-shadow:0 0 6px currentColor}
+.kp-live.kp-low{color:var(--ink3)}
+.kp-live.kp-mid{color:var(--dawn)} .kp-live.kp-mid .kp-dot{background:var(--dawn)}
+.kp-live.kp-high{color:var(--gold)} .kp-live.kp-high .kp-dot{background:var(--gold)}
+.kp-live.kp-storm{color:var(--warn)} .kp-live.kp-storm .kp-dot{background:var(--warn);
+  animation:kpPulse 1.6s ease-in-out infinite}
+@keyframes kpPulse{0%,100%{box-shadow:0 0 6px var(--warn)}50%{box-shadow:0 0 14px var(--warn)}}
+
+/* #3 weather pill on day-list rows */
+.wchip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.04em;color:var(--ink3);flex:0 0 auto;margin-left:6px}
+.wchip svg{width:14px;height:14px;flex:0 0 14px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.wchip.warm{color:var(--dusk)}
+.wchip.cold{color:var(--fjord)}
+.wchip.freeze{color:var(--alpine)}
 
 /* ===== at-a-glance summary strip (day view) — compact ===== */
 .glance-card{background:linear-gradient(160deg,var(--card) 0%,var(--bg2) 100%);
@@ -593,6 +643,7 @@ ul.pl strong{color:var(--ink);font-weight:600}
 </div></nav>
 
 <script src="data.js"></script>
+<script src="covers.js"></script>
 <script src="app.js"></script>
 <script>
 if('serviceWorker' in navigator){

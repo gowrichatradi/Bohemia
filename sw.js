@@ -1,5 +1,5 @@
-const CACHE = 'arctic-alpine-v19';
-const ASSETS = ['./','./index.html','./app.js','./data.js','./manifest.webmanifest',
+const CACHE = 'arctic-alpine-v20';
+const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png',
                 './history/style.css',
                 './history/day-01.html','./history/day-02.html','./history/day-03.html',

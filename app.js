@@ -291,8 +291,18 @@ function heroFor(d, idx, includeSun){
       <span class="sun-t set">${esc(d.set||'—')}<span class="sun-i">${I.set}</span></span>
       ${dl ? `<span class="sun-dur">${dl.h}h&nbsp;${dl.m.toString().padStart(2,'0')}m</span>` : ''}
     </div>`;
+    // #6 moon phase for the night of this day
+    const mp = moonPhase(dayDate(d));
+    sunBar += `<div class="moon-pill">${moonSVG(mp)}
+      <b>${esc(mp.name)}</b> <span class="pct">${mp.illum}%</span>
+    </div>`;
   }
-  return `<div class="hero fade" style="--accent:${leg.accent}">
+  // #1 cover photo (Wikimedia Commons) — key is day number (idx+1)
+  const cover = (typeof COVER_PHOTOS !== 'undefined') ? COVER_PHOTOS[idx+1] : null;
+  const coverCls = cover ? ' has-cover' : '';
+  const coverEl  = cover ? `<div class="hero-cover" style="background-image:url('${cover.replace(/'/g,"%27")}')"></div>` : '';
+  return `<div class="hero fade${coverCls}" style="--accent:${leg.accent}">
+    ${coverEl}
     <div class="eyebrow"><span>${esc(d.date)}</span><span class="dot"></span>
       <span class="leg-tag">${esc(leg.name)}</span></div>
     <h2>${esc(d.title)}</h2>
@@ -365,6 +375,151 @@ function vToday(){
   }
   return h;
 }
+/* ---------- #6 moon phase (astronomical, no API needed) ---------- */
+/* Age of the moon in days, 0..29.53, where 0 = new moon, ~14.77 = full */
+function moonAge(date){
+  const known = new Date(Date.UTC(2000, 0, 6, 18, 14, 0)); // known new moon
+  const synodic = 29.530588853;
+  const days = (date.getTime() - known.getTime()) / 86400000;
+  let a = days % synodic;
+  if (a < 0) a += synodic;
+  return a;
+}
+function moonPhase(date){
+  const age = moonAge(date);
+  const frac = age / 29.530588853;
+  const illum = Math.round(50 * (1 - Math.cos(frac * 2 * Math.PI)));
+  const names = ['New moon','Waxing crescent','First quarter','Waxing gibbous',
+                 'Full moon','Waning gibbous','Last quarter','Waning crescent'];
+  const idx = Math.floor((frac + 1/16) * 8) % 8;
+  return { age, illum, name: names[idx], idx, frac };
+}
+/* SVG moon icon showing the phase (illuminated area) */
+function moonSVG(mp){
+  // approximate the terminator with an ellipse; simple, readable
+  const r = 6, cx = 8, cy = 8;
+  const phase = mp.frac; // 0 = new, 0.5 = full, 1 = new
+  const waxing = phase < 0.5;
+  const k = Math.abs(Math.cos(phase * 2 * Math.PI)); // 0 at half, 1 at new/full
+  const dark = phase === 0.5 ? '' :
+    `<ellipse cx="${cx}" cy="${cy}" rx="${(r*k).toFixed(2)}" ry="${r}"
+       fill="var(--bg)" transform="translate(${(waxing ? -r*(1-k) : r*(1-k)).toFixed(2)},0)"/>`;
+  const dot = phase < 0.05 || phase > 0.95
+    ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--bg)" stroke="var(--ink3)" stroke-width=".7"/>`
+    : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--ink2)"/>${dark}`;
+  return `<svg class="moon-svg" viewBox="0 0 16 16">${dot}</svg>`;
+}
+
+/* ---------- #4 sky colour by hour (device local time) ---------- */
+function updateSky(){
+  const h = new Date().getHours();
+  let a,b,c;
+  if (h >= 5 && h < 8)        { a='rgba(232,168,96,.14)'; b='rgba(107,182,206,.09)'; c='rgba(217,164,65,.07)'; } // dawn — warm gold
+  else if (h >= 8 && h < 17)  { a='rgba(107,182,206,.11)'; b='rgba(159,216,210,.08)'; c='rgba(255,255,255,.02)'; } // day — cool sky
+  else if (h >= 17 && h < 20) { a='rgba(232,168,96,.14)'; b='rgba(232,115,90,.09)'; c='rgba(217,164,65,.06)'; } // dusk — warm
+  else                         { a='rgba(79,214,156,.14)'; b='rgba(107,182,206,.10)'; c='rgba(183,154,230,.05)'; } // night — aurora
+  const s = document.body.style;
+  s.setProperty('--sky-a', a); s.setProperty('--sky-b', b); s.setProperty('--sky-c', c);
+}
+
+/* ---------- #3 Open-Meteo weather forecast (no API key) ----------
+   Fetches once per session for each destination we ask for; caches. */
+const WX_CACHE = {};
+const WX_LOCATIONS = {
+  // day-index -> [lat,lon]
+   0:[55.68,12.57],  1:[55.68,12.57],
+   2:[67.93,13.08],  3:[67.93,13.08],  4:[67.93,13.08],
+   5:[68.23,14.57],  6:[68.23,14.57],
+   7:[59.91,10.75],
+   8:[60.39, 5.32],  9:[60.39, 5.32],
+  10:[60.90, 7.19], 11:[60.39, 5.32],
+  12:[47.60,10.75], 13:[47.56,13.65],
+  14:[48.81,14.32], 15:[50.08,14.44], 16:[50.08,14.44], 17:[50.08,14.44],
+  18:[51.05,13.74],
+  19:[55.68,12.57], 20:[55.68,12.57],
+};
+async function loadWeather(){
+  // fetch by unique lat/lon
+  const seen = {};
+  const promises = [];
+  Object.values(WX_LOCATIONS).forEach(([la,lo]) => {
+    const key = `${la},${lo}`;
+    if (seen[key] || WX_CACHE[key]) return;
+    seen[key] = true;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=16`;
+    promises.push(fetch(url).then(r => r.ok ? r.json() : null).then(j => {
+      if (j) WX_CACHE[key] = j.daily;
+    }).catch(() => {}));
+  });
+  await Promise.all(promises);
+  if (Object.keys(WX_CACHE).length) render();
+}
+function wxFor(dayIdx){
+  const loc = WX_LOCATIONS[dayIdx]; if (!loc) return null;
+  const cache = WX_CACHE[`${loc[0]},${loc[1]}`]; if (!cache) return null;
+  const d = DATA.days[dayIdx];
+  const [_, dd, mon] = d.date.match(/(\d+)\s+(\w+)/);
+  const m = {Sep:'09', Oct:'10'}[mon];
+  const key = `2026-${m}-${String(dd).padStart(2,'0')}`;
+  const i = cache.time.indexOf(key);
+  if (i < 0) return null;
+  return {
+    hi: Math.round(cache.temperature_2m_max[i]),
+    lo: Math.round(cache.temperature_2m_min[i]),
+    code: cache.weather_code[i],
+  };
+}
+/* Map WMO weather codes to a compact icon + label */
+function wxIcon(code){
+  // 0 clear, 1-3 mainly-clear/partly, 45/48 fog, 51-67 drizzle/rain,
+  // 71-77 snow, 80-82 showers, 95-99 thunderstorm
+  const sun = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4"/></svg>';
+  const cloud = '<svg viewBox="0 0 24 24"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11-2 4 4 0 000 10z"/></svg>';
+  const rain = '<svg viewBox="0 0 24 24"><path d="M7 15h11a4 4 0 000-8 6 6 0 00-11-2 4 4 0 000 10zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/></svg>';
+  const snow = '<svg viewBox="0 0 24 24"><path d="M7 15h11a4 4 0 000-8 6 6 0 00-11-2 4 4 0 000 10zM9 19h.01M13 20h.01M17 19h.01"/></svg>';
+  const storm = '<svg viewBox="0 0 24 24"><path d="M7 15h11a4 4 0 000-8 6 6 0 00-11-2 4 4 0 000 10zM13 17l-3 4h3l-2 3"/></svg>';
+  if (code === 0) return sun;
+  if (code <= 3) return cloud;
+  if (code >= 45 && code <= 48) return cloud;
+  if (code >= 51 && code <= 67) return rain;
+  if (code >= 71 && code <= 77) return snow;
+  if (code >= 80 && code <= 82) return rain;
+  if (code >= 95) return storm;
+  return cloud;
+}
+function wxTempClass(hi){
+  if (hi >= 18) return 'warm';
+  if (hi <= 2)  return 'freeze';
+  return 'cold';
+}
+
+/* ---------- #5 NOAA aurora Kp forecast (no key) ---------- */
+let KP_LATEST = null;
+async function loadKp(){
+  try {
+    const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    if (!res.ok) return;
+    const rows = await res.json();
+    // rows[0] = headers, rest = [timestamp, kp, ...]
+    const last = rows[rows.length-1];
+    KP_LATEST = { time: last[0], kp: parseFloat(last[1]) };
+    render();
+  } catch (_) {}
+}
+function kpLevelClass(kp){
+  if (kp >= 5) return 'kp-storm';
+  if (kp >= 4) return 'kp-high';
+  if (kp >= 3) return 'kp-mid';
+  return 'kp-low';
+}
+function kpLabel(kp){
+  if (kp >= 6) return 'Strong storm — visible far south';
+  if (kp >= 5) return 'Storm — bright, active display likely';
+  if (kp >= 4) return 'Active — good chance of aurora';
+  if (kp >= 3) return 'Enough for Lofoten latitude';
+  return 'Quiet — needs a clear low horizon';
+}
+
 /* ---------- daylight helpers ---------- */
 function toMin(hm){
   if (!hm) return null;
@@ -418,14 +573,26 @@ function sunArc(rise, set, dl){
 }
 
 /* Aurora viewing teaser — shown on Lofoten days.
-   Static advice; no external API dependency required. */
+   Static advice + live NOAA Kp when available. */
 function auroraCard(d){
+  const mp = moonPhase(dayDate(d));
+  const moonLine = mp.illum > 60
+    ? `<span class="pct" style="color:var(--dusk)">Bright moon (${mp.illum}%) — will wash faint auroras</span>`
+    : mp.illum < 25
+      ? `<span class="pct" style="color:var(--dawn)">Dark night (${mp.illum}% moon) — ideal for aurora</span>`
+      : `<span class="pct">Half moon (${mp.illum}%) — bright bands still show</span>`;
+  const liveKp = KP_LATEST
+    ? `<div class="kp-live ${kpLevelClass(KP_LATEST.kp)}">
+         <span class="kp-dot"></span>Live Kp <b>${KP_LATEST.kp.toFixed(1)}</b> · ${esc(kpLabel(KP_LATEST.kp))}
+       </div>`
+    : `<div class="kp-live"><span class="kp-dot"></span>Live Kp loading…</div>`;
   return `<div class="aurora-card fade">
     <div class="lab">${I.sun}Aurora watch · ${esc(d.set||'sunset')} to dawn</div>
     <h3>Tonight in Lofoten</h3>
-    <p>Aurora is a cloud problem, not a Kp problem — you're already at 68°N, which is under the auroral oval most clear nights of October. Watch the sky after sunset (${esc(d.set||'~18:30')}) through about 02:00; the peak is often 22:00–midnight.</p>
+    <p>You're at 68°N, under the auroral oval most clear October nights. Aurora is a cloud problem more than a Kp problem — watch the sky from sunset (${esc(d.set||'~18:30')}) through about 02:00, peak often 22:00–midnight.</p>
     <p style="color:var(--ink3);font-size:12.5px">Best local spots: <b style="color:var(--ink2)">Hamnøy bridge</b>, <b style="color:var(--ink2)">Skagsanden beach</b>, <b style="color:var(--ink2)">Gimsøysand</b> — all face north with no light pollution.</p>
-    <span class="kp">Kp ≥ 3 is enough at this latitude</span>
+    ${liveKp}
+    <div class="moon-pill" style="margin-top:8px">${moonSVG(mp)}<b>${esc(mp.name)}</b> · ${moonLine}</div>
   </div>`;
 }
 function actionsCard(){
@@ -465,11 +632,15 @@ function vDays(){
     }
     const cls = i===idx ? 'now' : (dayDate(d) < today() ? 'past' : '');
     const dp = d.date.split(' ');
+    const wx = wxFor(i);
+    const wxHtml = wx
+      ? `<span class="wchip ${wxTempClass(wx.hi)}">${wxIcon(wx.code)}${wx.hi}°/${wx.lo}°</span>`
+      : '';
     h += `<button class="drow ${cls} stagger" style="--i:${si++}" onclick="openDay(${i})">
         ${i===idx?'<span class="pulse"></span>':''}
         <div class="dt">${esc(dp[0])}<b>${esc(dp[1])} ${esc(dp[2]||'')}</b></div>
         <div class="bd"><div class="ti">${esc(d.title)}</div>
-          <div class="st">${esc(d.stay)}${d.drive?' · '+esc(d.drive):''}</div></div>
+          <div class="st">${esc(d.stay)}${d.drive?' · '+esc(d.drive):''}${wxHtml}</div></div>
         <div class="ic">${d.transport?I[d.transport.kind]:''}${d.car?I.car:''}</div>
         <div class="go">${I.chev}</div>
       </button>`;
@@ -716,3 +887,12 @@ addEventListener('touchend', e=>{
 
 render();
 setInterval(()=>{ if(S.view==='today'&&S.day==null) render(); }, 60000);
+
+/* #4 sky-colour: pick colors now, re-check every 10 minutes */
+updateSky();
+setInterval(updateSky, 10*60*1000);
+
+/* #3 weather + #5 aurora live fetch — non-blocking, re-render on arrival */
+loadWeather();
+loadKp();
+setInterval(loadKp, 30*60*1000);   // Kp refreshes every 30 min at NOAA

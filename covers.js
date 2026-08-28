@@ -1,0 +1,25 @@
+/* Cover photos for each day — curated Wikimedia Commons images.
+   All freely licensed (CC BY-SA or public domain). */
+const COVER_PHOTOS = {
+  1:  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/The_Nyhavn_Canal_3.jpg/1920px-The_Nyhavn_Canal_3.jpg',
+  2:  'https://upload.wikimedia.org/wikipedia/commons/3/37/Rosenborg_cph.jpg',
+  3:  'https://commons.wikimedia.org/wiki/Special:FilePath/Reine%20in%20Lofoten%2C%20Norway%2C%202012%20October.jpg?width=1600',
+  4:  'https://upload.wikimedia.org/wikipedia/commons/2/2f/A_view_2009.JPG',
+  5:  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Reine_at_Reinefjorden%2C_2010_September.jpg/1920px-Reine_at_Reinefjorden%2C_2010_September.jpg',
+  6:  'https://upload.wikimedia.org/wikipedia/commons/7/73/Lofotr_01.jpg',
+  7:  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Henningsv%C3%A6r_marina_buildings.jpg/1920px-Henningsv%C3%A6r_marina_buildings.jpg',
+  8:  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Oslo_Opera_House_-_2025.jpg/1920px-Oslo_Opera_House_-_2025.jpg',
+  9:  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/NSB_El_18_2245_Tunga.jpg/1920px-NSB_El_18_2245_Tunga.jpg',
+  10: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Bryggen%2C_Bergen%2C_Noruega%2C_2019-09-08%2C_DD_115-117_PAN.jpg/1920px-Bryggen%2C_Bergen%2C_Noruega%2C_2019-09-08%2C_DD_115-117_PAN.jpg',
+  11: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/View_of_the_Aurlandsfjord%2C_Aurlandsvangen_and_Flam_from_below_the_Prest_Summit.jpg',
+  12: 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Steinsdalsfossen.jpg',
+  13: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Schloss_Neuschwanstein_2013.jpg/1920px-Schloss_Neuschwanstein_2013.jpg',
+  14: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Hallstatt_-_Zentrum_.JPG/1920px-Hallstatt_-_Zentrum_.JPG',
+  15: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Blick_auf_das_Stadtzentrum_von_Krumau_%282026%29.jpg',
+  16: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Prague_07-2016_view_from_Lesser_Town_Tower_of_Charles_Bridge_img3.jpg/1920px-Prague_07-2016_view_from_Lesser_Town_Tower_of_Charles_Bridge_img3.jpg',
+  17: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Kostnice_Sedlec.JPG',
+  18: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Dresden_Germany_F%C3%BCrstenzug-01.jpg/1920px-Dresden_Germany_F%C3%BCrstenzug-01.jpg',
+  19: 'https://upload.wikimedia.org/wikipedia/commons/9/93/100130_150006_Dresden_Frauenkirche_winter_blue_sky-2.jpg',
+  20: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tivoli%20Copenhagen%20night.jpg?width=1600',
+  21: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Copenhagen_airport_from_air.jpg/1920px-Copenhagen_airport_from_air.jpg',
+};
