@@ -337,58 +337,32 @@ function vToday(){
     // Magazine-cover hero — full viewport, kinetic countdown, aurora shimmer, Ken-Burns pan
     const coverImg = (typeof COVER_PHOTOS !== 'undefined') ? (COVER_PHOTOS[5] || COVER_PHOTOS[3]) : null;
     const numStr = pre ? String(until) : '0';
+    // Format the trip window date once, so the eyebrow tells you *when* not "Issue No. 01"
+    const d0 = DATA.days[0], dN = DATA.days[DATA.days.length-1];
+    const eyebrowStr = pre ? 'For the trip · 28 Sep – 18 Oct 2026' : 'Trip complete';
     h += `<div class="mag-cover">
       ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>` : ''}
       <div class="mag-inner">
-        <div class="mag-eyebrow"><span>Issue No. 01 · Sep – Oct 2026</span></div>
+        <div class="mag-eyebrow"><span>${esc(eyebrowStr)}</span></div>
         <div class="mag-mid">
           <div class="mag-cd">
-            <span class="mag-cd-t">T minus</span>
-            <span class="mag-cd-num" id="magCdNum" data-target="${numStr}">0</span>
-            <span class="mag-cd-suffix">days</span>
+            <span class="mag-cd-num" id="magCdNum" data-target="${numStr}">${numStr}</span>
+            <span class="mag-cd-suffix">days<br><span class="mag-cd-suffix-sub">${pre?'to go':'done'}</span></span>
           </div>
-          <div class="mag-cd-label">${pre ? 'until Copenhagen' : 'trip complete'}</div>
           <div class="mag-band">
             <h1 class="mag-title">Arctic → Alpine</h1>
-            <p class="mag-sub">Copenhagen. Lofoten. Bergen. Bavaria. Bohemia. Home. Twenty nights across the top of Europe — Arctic light, fjords, a Bavarian fairy-tale, salt-mines older than the pyramids, and Prague at first light.</p>
+            <p class="mag-sub">Copenhagen · Lofoten · Bergen · Bavaria · Bohemia · Home. Twenty nights across the top of Europe.</p>
             <div class="mag-meta">
-              <span>28 SEP – 18 OCT 2026</span>
-              <span class="dot"></span>
               <span>${DATA.days.length} days</span>
               <span class="dot"></span>
               <span>5 countries</span>
+              <span class="dot"></span>
+              <span>4 flights</span>
             </div>
           </div>
         </div>
       </div>
       <div class="mag-scroll">Scroll</div>
-    </div>`;
-    // Chapter reel — horizontal-scroll table of contents, one card per leg
-    h += `<div class="chapter-reel reveal"><div class="chapter-reel-title">The Chapters</div>
-      <div class="chapter-list">` + LEGS.map((l, li) => {
-        // pick a representative photo for this leg from COVER_PHOTOS
-        const dayIdx = l.from + 1; // day-1-based
-        const photo = (typeof COVER_PHOTOS !== 'undefined') ? COVER_PHOTOS[dayIdx] : null;
-        const d0 = DATA.days[l.from];
-        const dEnd = LEGS[li+1] ? DATA.days[LEGS[li+1].from - 1] : DATA.days[DATA.days.length-1];
-        const dateRange = l.from === (LEGS[li+1] ? LEGS[li+1].from - 1 : DATA.days.length-1)
-          ? dateShort(d0)
-          : dateShort(d0) + ' – ' + dateShort(dEnd);
-        return `<div class="chapter" style="--ca:${l.accent}" onclick="openDay(${l.from})">
-          ${photo ? `<div class="chapter-photo" style="background-image:url('${photo.replace(/'/g,"%27")}')"></div>` : ''}
-          <div class="chapter-body">
-            <div class="chapter-no">Chapter ${String(li+1).padStart(2,'0')}</div>
-            <h3 class="chapter-nm">${esc(l.name)}</h3>
-            <p class="chapter-sub">${esc(l.sub)}</p>
-            <div class="chapter-dt">${dateRange}</div>
-          </div>
-        </div>`;
-      }).join('') + `</div></div>`;
-    // stats trio
-    h += `<div class="stats reveal">
-      <div class="st"><div class="n">${DATA.days.length}</div><div class="l">Days</div></div>
-      <div class="st"><div class="n">5</div><div class="l">Countries</div></div>
-      <div class="st"><div class="n">4</div><div class="l">Flights</div></div>
     </div>`;
     h += `<div class="reveal">${journeyMap()}</div>`;
     // first-up card
@@ -890,15 +864,22 @@ function vInfo(){
 }
 
 /* ---------- magazine-cover animations ---------- */
-/* Count the big countdown numeral up from 0 to the target with an
-   ease-out curve, then arm an IntersectionObserver so below-fold
-   .reveal blocks fade in as the user scrolls. */
+/* magCountedOnce keeps the count-up from re-triggering on every
+   render() (the 60-s tick, tab switch, resume). We animate exactly
+   once per session; subsequent renders just show the final number. */
+let magCountedOnce = false;
 function magAnimate(){
   const el = document.getElementById('magCdNum');
-  if (!el || el._done) return;
-  el._done = true;
+  if (!el) return;
   const target = parseInt(el.dataset.target||'0', 10);
-  const dur = 1400;   // ms
+  if (magCountedOnce) {
+    el.textContent = String(target);
+    // reveal below-fold sections instantly on re-renders (no flicker)
+    document.querySelectorAll('.reveal').forEach(x => x.classList.add('on'));
+    return;
+  }
+  magCountedOnce = true;
+  const dur = 1400;
   const start = performance.now();
   const ease = t => 1 - Math.pow(1 - t, 4);
   function step(now){
@@ -908,16 +889,13 @@ function magAnimate(){
     else el.textContent = String(target);
   }
   requestAnimationFrame(step);
-  // reveal-on-scroll for blocks below the fold
+  // IntersectionObserver for the first-time reveal-on-scroll
   const io = new IntersectionObserver((entries) => {
     entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('on');
-        io.unobserve(e.target);
-      }
+      if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
     });
-  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
-  document.querySelectorAll('.reveal:not(.on)').forEach(el => io.observe(el));
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal:not(.on)').forEach(x => io.observe(x));
 }
 
 /* Clear the service-worker cache and hard-reload.
@@ -1044,7 +1022,13 @@ addEventListener('touchend', e=>{
 }, {passive:true});
 
 render();
-setInterval(()=>{ if(S.view==='today'&&S.day==null) render(); }, 60000);
+/* Only re-render on the 60-s tick if we're actually IN the trip
+   (the current-day chip needs to keep the sun-bar honest). Pre-trip,
+   the countdown is stable within a session and re-rendering just
+   restarts every animation. */
+setInterval(() => {
+  if (S.view === 'today' && S.day == null && currentIndex() >= 0) render();
+}, 60000);
 
 /* #4 sky-colour: pick colors now, re-check every 10 minutes */
 updateSky();
