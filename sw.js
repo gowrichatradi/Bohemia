@@ -1,4 +1,4 @@
-const CACHE = 'arctic-alpine-v32';
+const CACHE = 'arctic-alpine-v33';
 const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png',
                 './history/style.css',
@@ -15,7 +15,8 @@ const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./mani
                 './images/day-10.jpg','./images/day-11.jpg','./images/day-12.jpg',
                 './images/day-13.jpg','./images/day-14.jpg','./images/day-15.jpg',
                 './images/day-16.jpg','./images/day-17.jpg','./images/day-18.jpg',
-                './images/day-19.jpg','./images/day-20.jpg','./images/day-21.jpg'];
+                './images/day-19.jpg','./images/day-20.jpg','./images/day-21.jpg',
+                './images/hero.jpg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });

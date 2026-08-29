@@ -98,11 +98,14 @@ function journeyMap(){
     const short = d => d.date.replace(/^\w+\s/, '');
     return s.from === s.to ? short(d1) : short(d1) + ' – ' + short(d2);
   };
+  // per-stop accent colour from its leg
+  const stopAccent = (dayIdx) => (legOf(dayIdx) || LEGS[0]).accent;
   const stops = STOPS.map((s, i) => {
     const done = curStop > i, active = curStop === i, next = cIdx < 0 && i === 0;
     const cls = done ? 'done' : active ? 'active' : next ? 'next' : 'future';
     const nights = s.to - s.from + 1;
-    return `<button class="rstop ${cls}" onclick="openDay(${s.from})">
+    const ac = stopAccent(s.from);
+    return `<button class="rstop ${cls}" style="--sa:${ac}" onclick="openDay(${s.from})">
       <div class="rdot"><span class="rd-in"></span>${active||next?'<span class="rd-ring"></span>':''}</div>
       <div class="rline"></div>
       <div class="rbody">
@@ -149,26 +152,30 @@ function initJourneyMap(){
     minZoom:3, maxZoom:9
   });
   el._tpMap = map;
-  // Esri World Dark Gray Canvas — free, no API key, dark styling
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom:16,
-    attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>'
+  // OpenTopoMap — free, no API key. Real topographic map with contours,
+  // elevation shading, snow-line and vegetation colour. Shows mountains,
+  // fjords and valleys as they are.
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom:15, subdomains:'abc',
+    attribution:'Map data: © <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors, SRTM · Style: © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
   }).addTo(map);
-  // Country/city labels layer on top for legibility
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom:16, opacity:.85
+  // Route polyline in order — dark solid ink so it reads well against
+  // the colourful topographic map. Add a white halo underneath.
+  L.polyline(MAP_STOPS.map(s=>s.c), {
+    color:'#ffffff', weight:5, opacity:.85, lineJoin:'round'
   }).addTo(map);
-  // Route polyline in order
-  const line = L.polyline(MAP_STOPS.map(s=>s.c), {
-    color:'#4FD69C', weight:2.5, opacity:.85, dashArray:'4 6', lineJoin:'round'
+  L.polyline(MAP_STOPS.map(s=>s.c), {
+    color:'#0B0F13', weight:2.5, opacity:.95, lineJoin:'round'
   }).addTo(map);
-  // Markers
+  // Markers — coloured by which leg the day belongs to
   const cIdx = currentIndex();
   MAP_STOPS.forEach(s => {
     const active = cIdx >= 0 && cIdx === s.idx;
+    const legAccent = (legOf(s.idx) || LEGS[0]).accent;
     const icon = L.divIcon({
-      className:'', html:`<div class="tp-pin${active?' active':''}"></div>`,
-      iconSize:[14,14], iconAnchor:[7,7]
+      className:'',
+      html:`<div class="tp-pin${active?' active':''}" style="--pc:${legAccent}"></div>`,
+      iconSize:[16,16], iconAnchor:[8,8]
     });
     L.marker(s.c, {icon}).addTo(map)
       .bindPopup(`<b>${s.nm}</b>${s.dt}`);
@@ -335,7 +342,8 @@ function vToday(){
   if(idx < 0){
     const pre = until > 0;
     // Magazine-cover hero — full viewport, kinetic countdown, aurora shimmer, Ken-Burns pan
-    const coverImg = (typeof COVER_PHOTOS !== 'undefined') ? (COVER_PHOTOS[5] || COVER_PHOTOS[3]) : null;
+    // Signature hero photo: Aurora Borealis over Reine, Lofoten (high-res, ~1000 KB)
+    const coverImg = './images/hero.jpg';
     const numStr = pre ? String(until) : '0';
     // Format the trip window date once, so the eyebrow tells you *when* not "Issue No. 01"
     const d0 = DATA.days[0], dN = DATA.days[DATA.days.length-1];
@@ -365,11 +373,7 @@ function vToday(){
       <div class="mag-scroll">Scroll</div>
     </div>`;
     h += `<div class="reveal">${journeyMap()}</div>`;
-    // first-up card
-    h += `<div class="card fade reveal"><div class="lab">${I.chev}First up</div>`
-       + `<div class="ti" style="font-family:var(--serif);font-size:18px;font-weight:500;letter-spacing:-.02em">${esc(DATA.days[0].title)}</div>`
-       + `<div class="muted" style="margin-top:6px;font-size:14px">${esc(DATA.days[0].date)} · ${esc(DATA.days[0].stay)}</div>`
-       + `<button class="chip" style="margin-top:14px" onclick="openDay(0)">Open the day ${I.chev}</button></div>`;
+    // "First up" card removed at user request (redundant with the journey timeline)
     h += `<div class="reveal">${actionsCard()}</div>`;
   } else {
     const d = DATA.days[idx];
