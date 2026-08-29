@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const V = $('view');
 
-const TRIP_START = '2026-09-28';
+const TRIP_START = '2026-09-27';
 const TRIP_END   = '2026-10-18';
 
 /* ---------- icons ---------- */
@@ -215,10 +215,10 @@ function currentIndex(){
   }
   return -1;
 }
-function daysUntil(){ return Math.ceil((new Date(2026,8,28) - today())/864e5); }
+function daysUntil(){ return Math.ceil((new Date(2026,8,27) - today())/864e5); }
 /* fraction of the trip elapsed, 0..1 */
 function tripProgress(){
-  const s = new Date(2026,8,28), e = new Date(2026,9,18), n = today();
+  const s = new Date(2026,8,27), e = new Date(2026,9,19), n = today();
   return Math.max(0, Math.min(1, (n - s)/(e - s)));
 }
 function dateShort(d){ return esc(d.date.replace(/^\w+\s/,'')); }
@@ -339,7 +339,7 @@ function vToday(){
     const numStr = pre ? String(until) : '0';
     // Format the trip window date once, so the eyebrow tells you *when* not "Issue No. 01"
     const d0 = DATA.days[0], dN = DATA.days[DATA.days.length-1];
-    const eyebrowStr = pre ? 'For the trip · 28 Sep – 18 Oct 2026' : 'Trip complete';
+    const eyebrowStr = pre ? 'For the trip · 27 Sep – 19 Oct 2026' : 'Trip complete';
     h += `<div class="mag-cover">
       ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>` : ''}
       <div class="mag-inner">
@@ -867,7 +867,7 @@ function vInfo(){
 /* magCountedOnce keeps the count-up from re-triggering on every
    render() (the 60-s tick, tab switch, resume). We animate exactly
    once per session; subsequent renders just show the final number. */
-let magCountedOnce = false;
+let magCountedOnce = true; /* skip count-up — was flickering */
 function magAnimate(){
   const el = document.getElementById('magCdNum');
   if (!el) return;
@@ -973,7 +973,7 @@ function render(){
   V.classList.remove('anim-l','anim-r','anim-pop'); void V.offsetWidth; V.classList.add(nextAnim); nextAnim='anim-pop';
   const idx=currentIndex();
   $('tSub').textContent = idx>=0 ? DATA.days[idx].date+' · day '+(idx+1)+' of '+DATA.days.length
-    : (daysUntil()>0 ? daysUntil()+' days to go' : '28 Sep – 18 Oct 2026');
+    : (daysUntil()>0 ? daysUntil()+' days to go' : '27 Sep – 19 Oct 2026');
   $('progBar').style.width = (tripProgress()*100).toFixed(1)+'%';
   // real-earth map — init or re-init as needed
   if (document.getElementById('jmap-real')) {
