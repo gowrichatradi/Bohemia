@@ -334,45 +334,69 @@ function vToday(){
 
   if(idx < 0){
     const pre = until > 0;
-    const leg = legOf(0);
-    // scenic pre-trip cover — Reine at sunrise
-    const preCover = (typeof COVER_PHOTOS !== 'undefined') ? COVER_PHOTOS[5] : null;
-    const coverCls = preCover ? ' has-cover' : '';
-    const coverEl  = preCover ? `<div class="hero-cover" style="background-image:url('${preCover.replace(/'/g,"%27")}')"></div>` : '';
-    h += `<div class="hero fade${coverCls}" style="--accent:${leg.accent}">
-      ${coverEl}
-      <div class="eyebrow"><span>${pre?'Counting down':'Trip complete'}</span>
-        <span class="dot"></span><span class="leg-tag">Arctic → Alpine</span></div>
-      ${pre?`<div class="cd">${until}<small>days until Copenhagen</small></div>
-      <h2>Copenhagen first, then Lofoten and the long road south.</h2>`
-      :`<h2>Twenty nights, done.</h2>`}
-      <div class="stay">${I.bed}<span>Trip begins · <b>Mon 28 Sep 2026</b></span></div>
-      ${sceneSVG(leg.scene,'scene')}</div>`;
+    // Magazine-cover hero — full viewport, kinetic countdown, aurora shimmer, Ken-Burns pan
+    const coverImg = (typeof COVER_PHOTOS !== 'undefined') ? (COVER_PHOTOS[5] || COVER_PHOTOS[3]) : null;
+    const numStr = pre ? String(until) : '0';
+    h += `<div class="mag-cover">
+      ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>` : ''}
+      <div class="mag-inner">
+        <div class="mag-eyebrow"><span>Issue No. 01 · Sep – Oct 2026</span></div>
+        <div class="mag-mid">
+          <div class="mag-cd">
+            <span class="mag-cd-t">T minus</span>
+            <span class="mag-cd-num" id="magCdNum" data-target="${numStr}">0</span>
+            <span class="mag-cd-suffix">days</span>
+          </div>
+          <div class="mag-cd-label">${pre ? 'until Copenhagen' : 'trip complete'}</div>
+          <div class="mag-band">
+            <h1 class="mag-title">Arctic → Alpine</h1>
+            <p class="mag-sub">Copenhagen. Lofoten. Bergen. Bavaria. Bohemia. Home. Twenty nights across the top of Europe — Arctic light, fjords, a Bavarian fairy-tale, salt-mines older than the pyramids, and Prague at first light.</p>
+            <div class="mag-meta">
+              <span>28 SEP – 18 OCT 2026</span>
+              <span class="dot"></span>
+              <span>${DATA.days.length} days</span>
+              <span class="dot"></span>
+              <span>5 countries</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mag-scroll">Scroll</div>
+    </div>`;
+    // Chapter reel — horizontal-scroll table of contents, one card per leg
+    h += `<div class="chapter-reel reveal"><div class="chapter-reel-title">The Chapters</div>
+      <div class="chapter-list">` + LEGS.map((l, li) => {
+        // pick a representative photo for this leg from COVER_PHOTOS
+        const dayIdx = l.from + 1; // day-1-based
+        const photo = (typeof COVER_PHOTOS !== 'undefined') ? COVER_PHOTOS[dayIdx] : null;
+        const d0 = DATA.days[l.from];
+        const dEnd = LEGS[li+1] ? DATA.days[LEGS[li+1].from - 1] : DATA.days[DATA.days.length-1];
+        const dateRange = l.from === (LEGS[li+1] ? LEGS[li+1].from - 1 : DATA.days.length-1)
+          ? dateShort(d0)
+          : dateShort(d0) + ' – ' + dateShort(dEnd);
+        return `<div class="chapter" style="--ca:${l.accent}" onclick="openDay(${l.from})">
+          ${photo ? `<div class="chapter-photo" style="background-image:url('${photo.replace(/'/g,"%27")}')"></div>` : ''}
+          <div class="chapter-body">
+            <div class="chapter-no">Chapter ${String(li+1).padStart(2,'0')}</div>
+            <h3 class="chapter-nm">${esc(l.name)}</h3>
+            <p class="chapter-sub">${esc(l.sub)}</p>
+            <div class="chapter-dt">${dateRange}</div>
+          </div>
+        </div>`;
+      }).join('') + `</div></div>`;
     // stats trio
-    h += `<div class="stats fade">
+    h += `<div class="stats reveal">
       <div class="st"><div class="n">${DATA.days.length}</div><div class="l">Days</div></div>
       <div class="st"><div class="n">5</div><div class="l">Countries</div></div>
       <div class="st"><div class="n">4</div><div class="l">Flights</div></div>
     </div>`;
-    // epigraph — sets the tone
-    h += `<div class="epi fade"><p>Twenty nights across the top of Europe — Arctic light, fjords, a Bavarian fairy-tale, salt-mines older than the pyramids, and Prague at first light.</p>
-      <div class="att">The plan</div></div>`;
-    h += journeyMap();
-    // upcoming legs — horizontal scroller
-    h += `<div class="preview fade"><div class="lab">${I.chev}The legs, in order</div>
-      <div class="plegs">` + LEGS.map((l,li)=>{
-        const d = DATA.days[l.from];
-        return `<div class="pl ${li===0?'on':''}" onclick="openDay(${l.from})">
-          <div class="nm">${esc(l.name)}</div>
-          <div class="dt">${dateShort(d)}</div>
-          <div class="sb">${esc(l.sub)}</div></div>`;
-      }).join('') + `</div></div>`;
+    h += `<div class="reveal">${journeyMap()}</div>`;
     // first-up card
-    h += `<div class="card fade"><div class="lab">${I.chev}First up</div>`
-       + `<div class="ti" style="font-family:var(--serif);font-size:18px;font-weight:500;letter-spacing:-.02em;font-variation-settings:'opsz' 32">${esc(DATA.days[0].title)}</div>`
+    h += `<div class="card fade reveal"><div class="lab">${I.chev}First up</div>`
+       + `<div class="ti" style="font-family:var(--serif);font-size:18px;font-weight:500;letter-spacing:-.02em">${esc(DATA.days[0].title)}</div>`
        + `<div class="muted" style="margin-top:6px;font-size:14px">${esc(DATA.days[0].date)} · ${esc(DATA.days[0].stay)}</div>`
        + `<button class="chip" style="margin-top:14px" onclick="openDay(0)">Open the day ${I.chev}</button></div>`;
-    h += actionsCard();
+    h += `<div class="reveal">${actionsCard()}</div>`;
   } else {
     const d = DATA.days[idx];
     // include sun chip in hero here — no glance strip on this view
@@ -865,6 +889,37 @@ function vInfo(){
   return h + '</div>';
 }
 
+/* ---------- magazine-cover animations ---------- */
+/* Count the big countdown numeral up from 0 to the target with an
+   ease-out curve, then arm an IntersectionObserver so below-fold
+   .reveal blocks fade in as the user scrolls. */
+function magAnimate(){
+  const el = document.getElementById('magCdNum');
+  if (!el || el._done) return;
+  el._done = true;
+  const target = parseInt(el.dataset.target||'0', 10);
+  const dur = 1400;   // ms
+  const start = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 4);
+  function step(now){
+    const t = Math.min(1, (now - start) / dur);
+    el.textContent = Math.round(ease(t) * target);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = String(target);
+  }
+  requestAnimationFrame(step);
+  // reveal-on-scroll for blocks below the fold
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('on');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+  document.querySelectorAll('.reveal:not(.on)').forEach(el => io.observe(el));
+}
+
 /* Clear the service-worker cache and hard-reload.
    Handy on phones where clearing site data is buried in system Settings. */
 async function forceRefresh(){
@@ -949,6 +1004,8 @@ function render(){
   }
   // show cache version in the guide tab
   if (document.getElementById('cacheVer')) updateCacheVer();
+  // magazine cover animations — count-up numeral + reveal-on-scroll
+  if (document.getElementById('magCdNum')) requestAnimationFrame(magAnimate);
   // top-bar progress ring
   const p = tripProgress();
   const pr = $('pringFg'); if (pr) pr.style.strokeDashoffset = (1 - p).toFixed(3);
