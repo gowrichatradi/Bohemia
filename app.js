@@ -349,7 +349,9 @@ function vToday(){
     const d0 = DATA.days[0], dN = DATA.days[DATA.days.length-1];
     const eyebrowStr = pre ? 'For the trip · 27 Sep – 19 Oct 2026' : 'Trip complete';
     h += `<div class="mag-cover">
-      ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>` : ''}
+      ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>
+      <div class="mag-photo-grade"></div>
+      <div class="mag-grain"></div>` : ''}
       <div class="mag-inner">
         <div class="mag-eyebrow"><span>${esc(eyebrowStr)}</span></div>
         <div class="mag-mid">
