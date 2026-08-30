@@ -122,15 +122,15 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
 /* hero cover photo layer — see #1 */
 .hero-cover{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;
   opacity:0;transition:opacity 1.2s var(--ease)}
-.hero.has-cover .hero-cover{opacity:.7}
+.hero.has-cover .hero-cover{opacity:1}
 .hero.has-cover{min-height:220px}
-.hero.has-cover::before{opacity:.85;
-  background:
-    radial-gradient(70% 100% at 20% 100%, rgba(11,15,19,.95), transparent 65%),
-    linear-gradient(180deg, rgba(11,15,19,.15) 0%, rgba(11,15,19,.35) 40%, rgba(11,15,19,.9) 90%)}
-.hero.has-cover .scene{opacity:.15}
-.hero.has-cover .eyebrow,.hero.has-cover .stay{text-shadow:0 1px 8px rgba(0,0,0,.5)}
-.hero.has-cover h2{text-shadow:0 2px 12px rgba(0,0,0,.6)}
+/* very light overlay — let the illustrated poster show through, but keep
+   text legible with a subtle bottom-only fade */
+.hero.has-cover::before{opacity:.7;
+  background:linear-gradient(180deg, rgba(11,15,19,0) 45%, rgba(11,15,19,.55) 78%, rgba(11,15,19,.9) 100%)}
+.hero.has-cover .scene{opacity:0}
+.hero.has-cover .eyebrow,.hero.has-cover .stay{text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.hero.has-cover h2{text-shadow:0 2px 12px rgba(0,0,0,.75)}
 .hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150%;z-index:0;
   pointer-events:none;opacity:.6;
   background:
@@ -487,21 +487,10 @@ ul.pl strong{color:var(--ink);font-weight:600}
   min-height:min(88vh,720px);border-radius:0;isolation:isolate;
   color:#F5F1E8;letter-spacing:-.02em}
 .mag-photo{position:absolute;inset:-4%;z-index:0;background-size:cover;background-position:center;
-  animation:magPan 26s ease-in-out infinite alternate;will-change:transform;
-  /* Anderson-style vintage-travel-poster stylization —
-     heavy saturation, deep contrast, warm colour grade, subtle sepia */
-  filter:saturate(1.55) contrast(1.28) brightness(1.02) sepia(.14) hue-rotate(-6deg)}
-/* Warm colour-grade overlay — orange highlights up top, teal shadows below */
-.mag-cover .mag-photo-grade{position:absolute;inset:0;z-index:1;pointer-events:none;
-  mix-blend-mode:soft-light;opacity:.55;
-  background:
-    linear-gradient(180deg,
-      rgba(240,140,60,.55) 0%,
-      rgba(240,140,60,.0) 35%,
-      rgba(20,80,100,.0) 60%,
-      rgba(15,60,80,.5) 100%)}
-/* Subtle paper-grain texture over the whole hero */
-.mag-cover .mag-grain{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.08;
+  animation:magPan 26s ease-in-out infinite alternate;will-change:transform}
+/* very light paper-grain texture — kept for texture, not stylization */
+.mag-cover .mag-photo-grade{display:none}
+.mag-cover .mag-grain{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.05;
   mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .05 0 0 0 0 .04 0 0 0 0 .02 0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
 @keyframes magPan{
