@@ -349,10 +349,10 @@ function vToday(){
     const d0 = DATA.days[0], dN = DATA.days[DATA.days.length-1];
     const eyebrowStr = pre ? 'For the trip · 27 Sep – 19 Oct 2026' : 'Trip complete';
     h += `<div class="mag-cover">
-      ${coverImg ? `<div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>
-      <div class="mag-photo-grade"></div>
-      <div class="mag-grain"></div>` : ''}
-      <div class="mag-inner">
+      ${coverImg ? `<div class="mag-poster">
+        <div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g,"%27")}')"></div>
+      </div>` : ''}
+      <div class="mag-inner-wrap"><div class="mag-inner">
         <div class="mag-eyebrow"><span>${esc(eyebrowStr)}</span></div>
         <div class="mag-mid">
           <div class="mag-cd">
@@ -371,8 +371,7 @@ function vToday(){
             </div>
           </div>
         </div>
-      </div>
-      <div class="mag-scroll">Scroll</div>
+      </div></div>
     </div>`;
     h += `<div class="reveal">${journeyMap()}</div>`;
     // "First up" card removed at user request (redundant with the journey timeline)

@@ -483,11 +483,13 @@ ul.pl strong{color:var(--ink);font-weight:600}
    Full-viewport photograph with a countdown that counts up on load,
    Ken-Burns pan, aurora shimmer, staggered typography reveal.
    ================================================================ */
-.mag-cover{position:relative;overflow:hidden;margin:0 -18px 22px;
-  min-height:min(88vh,720px);border-radius:0;isolation:isolate;
-  color:#F5F1E8;letter-spacing:-.02em}
-.mag-photo{position:absolute;inset:-4%;z-index:0;background-size:cover;background-position:center;
-  animation:magPan 26s ease-in-out infinite alternate;will-change:transform}
+.mag-cover{margin:0 -18px 22px;color:#F5F1E8;letter-spacing:-.02em;position:relative}
+/* Poster art — its own block, respects the landscape 3:2 aspect */
+.mag-poster{position:relative;width:100%;aspect-ratio:3/2;overflow:hidden;background:#0B0F13;isolation:isolate}
+.mag-photo{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;
+  animation:magPan 30s ease-in-out infinite alternate;will-change:transform}
+/* Meta card below the poster — countdown + title + description */
+.mag-inner-wrap{padding:26px 24px 10px}
 /* very light paper-grain texture — kept for texture, not stylization */
 .mag-cover .mag-photo-grade{display:none}
 .mag-cover .mag-grain{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.05;
@@ -515,8 +517,8 @@ ul.pl strong{color:var(--ink);font-weight:600}
   100%{transform:translate3d(6%,-1%,0) scale(1.08);opacity:.55}
 }
 /* the content column — everything left-aligned for consistent axis */
-.mag-inner{position:relative;z-index:3;padding:56px 24px 60px;display:flex;flex-direction:column;
-  min-height:inherit;justify-content:space-between;text-align:left;align-items:flex-start}
+.mag-inner{position:relative;z-index:3;padding:0;display:flex;flex-direction:column;
+  text-align:left;align-items:flex-start;gap:26px}
 .mag-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;
   color:rgba(245,241,232,.7);animation:magIn .9s .1s var(--ease) both;
   padding-left:0;position:relative}
