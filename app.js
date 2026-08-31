@@ -195,10 +195,12 @@ const PHASE = {
   notes:   {name:'Good to know',     ic:I.tip,  pc:'var(--ink2)'},
 };
 const KIND2PHASE = {dawn:'dawn', main:'day', aft:'day', cafe:'stops', mkt:'stops',
-                    kid:'kid', dusk:'evening', eve:'evening', also:'evening', tip:'notes', warn:'notes'};
+                    shop:'stops', kid:'kid', dusk:'evening', eve:'evening', also:'evening',
+                    tip:'notes', warn:'notes'};
 /* default sub-labels for parts that ship without one */
-const KIND_LABEL = {mkt:'Provisions', cafe:'Coffee & a bite', also:'Also', eve:'Evening'};
-const KIND_ICON  = {mkt:I.shop, cafe:I.cup};
+const KIND_LABEL = {mkt:'Provisions', cafe:'Coffee & a bite', shop:'Shop / souvenirs',
+                    also:'Also', eve:'Evening'};
+const KIND_ICON  = {mkt:I.shop, cafe:I.cup, shop:I.shop};
 
 /* ---------- state ---------- */
 const S = { view:'today', day:null, seg:0, bk:0, q:'' };
