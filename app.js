@@ -709,13 +709,17 @@ function vDay(i){
   const d = DATA.days[i];
   const prev = DATA.days[i-1], next = DATA.days[i+1];
   const dayNum = String(i+1).padStart(2,'0');
-  const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 0 2px">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
+  const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 6px 2px 0">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
+  // Shop link — same treatment, fjord-blue accent; only shown when a shop
+  // page exists for this day (built by scripts/build_shop_pages.py).
+  const SHOP_DAYS = new Set([2,4,6,7,8,10,11,12,13,14,15,16,17,18,20]);
+  const shopLink = SHOP_DAYS.has(i+1) ? `<a href="shop/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fjord);background:rgba(107,182,206,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(107,182,206,.28);margin:6px 0 2px">Shop &amp; souvenirs <span aria-hidden="true">↗</span></a>` : '';
   // aurora teaser on Lofoten leg days (index 2..6 → Reine and Svolvær)
   const isLofoten = i>=2 && i<=6;
   const aurora = isLofoten ? auroraCard(d) : '';
   // sun info is now inline in the hero itself (includeSun=true)
   let h = `<button class="back" onclick="backToDays()">${I.chev}All days</button>`
-    + heroFor(d, i, true) + histLink + aurora + timeline(d);
+    + heroFor(d, i, true) + histLink + shopLink + aurora + timeline(d);
   h += `<div class="daynav">`
     + (prev?`<button onclick="navigateDay(-1)"><div class="k">← Previous</div><div class="v">${esc(prev.title)}</div></button>`:`<button style="visibility:hidden"></button>`)
     + (next?`<button class="nx" onclick="navigateDay(1)"><div class="k">Next →</div><div class="v">${esc(next.title)}</div></button>`:`<button class="nx" style="visibility:hidden"></button>`)
