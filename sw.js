@@ -1,4 +1,4 @@
-const CACHE = 'arctic-alpine-v45';
+const CACHE = 'arctic-alpine-v46';
 const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png',
                 './history/style.css',
@@ -17,11 +17,13 @@ const ASSETS = ['./','./index.html','./app.js','./data.js','./covers.js','./mani
                 './images/day-16.jpg','./images/day-17.jpg','./images/day-18.jpg',
                 './images/day-19.jpg','./images/day-20.jpg','./images/day-21.jpg',
                 './images/hero.jpg',
-                './shop/day-02.html','./shop/day-04.html','./shop/day-06.html',
-                './shop/day-07.html','./shop/day-08.html','./shop/day-10.html',
-                './shop/day-11.html','./shop/day-12.html','./shop/day-13.html',
-                './shop/day-14.html','./shop/day-15.html','./shop/day-16.html',
-                './shop/day-17.html','./shop/day-18.html','./shop/day-20.html'];
+                './shop/day-01.html','./shop/day-02.html','./shop/day-03.html',
+                './shop/day-04.html','./shop/day-05.html','./shop/day-06.html',
+                './shop/day-07.html','./shop/day-08.html','./shop/day-09.html',
+                './shop/day-10.html','./shop/day-11.html','./shop/day-12.html',
+                './shop/day-13.html','./shop/day-14.html','./shop/day-15.html',
+                './shop/day-16.html','./shop/day-17.html','./shop/day-18.html',
+                './shop/day-19.html','./shop/day-20.html','./shop/day-21.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
