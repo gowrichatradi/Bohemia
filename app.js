@@ -1085,6 +1085,7 @@ function vBook() {
     },
     { name: "Cars", groups: [bookGroup(/^Cars/)].filter(Boolean) },
     { name: "Stays", groups: [bookGroup("Where you sleep")].filter(Boolean) },
+    { name: "Budget", budget: true },
   ];
   const bk = Math.min(S.bk || 0, TABS.length - 1);
   h +=
@@ -1093,14 +1094,87 @@ function vBook() {
       (t, i) =>
         `<button class="${bk === i ? "on" : ""}" onclick="S.bk=${i};render()">${t.name}</button>`,
     ).join("") +
-    `</div><p class="intro">Tap a reference to copy it.</p>`;
+    `</div>`;
 
-  TABS[bk].groups.forEach((g) => {
-    if (TABS[bk].groups.length > 1)
-      h += `<div class="grph">${esc(g.head)}</div>`; // sub-headers only when >1 group
-    h += bookingRows(g.rows);
-  });
+  if (TABS[bk].budget) {
+    h += vBudget();
+  } else {
+    h += `<p class="intro">Tap a reference to copy it.</p>`;
+    TABS[bk].groups.forEach((g) => {
+      if (TABS[bk].groups.length > 1)
+        h += `<div class="grph">${esc(g.head)}</div>`; // sub-headers only when >1 group
+      h += bookingRows(g.rows);
+    });
+  }
   return h + "</div>";
+}
+
+/* ---------- budget view ---------- */
+function fmtMoney(n, ccy) {
+  if (n === null || n === undefined) return `<span class="bg-q">?</span>`;
+  const sign = n < 0 ? "−" : "";
+  const abs = Math.abs(Math.round(n));
+  return `<span class="bg-n">${sign}${ccy || "$"}${abs.toLocaleString("en-AU")}</span>`;
+}
+function vBudget() {
+  const B = DATA.budget || { currency: "AUD", categories: [] };
+  const ccy = "$";
+  let grand = 0,
+    unknown = 0;
+  let h = `<p class="intro">${esc(B.note || "")}</p>`;
+
+  const catTotals = [];
+  B.categories.forEach((c) => {
+    if (c.head === "Contingency") return; // computed at the end
+    let sub = 0,
+      qs = 0;
+    c.rows.forEach((r) => {
+      if (typeof r.cash === "number") sub += r.cash;
+      else if (r.cash === null) qs += 1;
+    });
+    catTotals.push({ head: c.head, sub, qs });
+    grand += sub;
+    unknown += qs;
+  });
+  const contingency = Math.round(grand * 0.1);
+
+  B.categories.forEach((c) => {
+    const ct = catTotals.find((x) => x.head === c.head);
+    const isContingency = c.head === "Contingency";
+    h += `<div class="bg-cat"><div class="bg-h">${esc(c.head)}</div>`;
+    if (c.note) h += `<div class="bg-note">${fmt(c.note)}</div>`;
+    c.rows.forEach((r) => {
+      const cash =
+        r.cash === "auto"
+          ? fmtMoney(contingency, ccy)
+          : fmtMoney(r.cash, ccy);
+      h += `<div class="bg-row">
+        <div class="bg-l">
+          <div class="bg-nm">${esc(r.name || "")}</div>
+          ${r.detail ? `<div class="bg-d">${fmt(r.detail)}</div>` : ""}
+          <div class="bg-meta">
+            ${r.when ? `<span class="bg-w">${esc(r.when)}</span>` : ""}
+            ${r.ref ? `<button class="ref bg-ref" onclick="copyRef('${esc(String(r.ref).split(" ")[0])}')">${I.copy}${esc(r.ref)}</button>` : ""}
+            ${r.tag ? `<span class="tag t-open">${esc(r.tag)}</span>` : ""}
+          </div>
+        </div>
+        <div class="bg-r">${cash}</div>
+      </div>`;
+    });
+    if (!isContingency) {
+      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
+    }
+    h += `</div>`;
+  });
+
+  const trueTotal = grand + contingency;
+  h += `<div class="bg-total">
+    <div class="bg-total-row"><span>Subtotal (known lines)</span><b>${fmtMoney(grand, ccy)}</b></div>
+    <div class="bg-total-row"><span>Contingency · 10%</span><b>${fmtMoney(contingency, ccy)}</b></div>
+    <div class="bg-total-row bg-grand"><span>Grand total</span><b>${fmtMoney(trueTotal, ccy)}</b></div>
+    ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from your receipts and this total will update.</div>` : ""}
+  </div>`;
+  return h;
 }
 
 /* ---------- regional food dictionary ---------- */
