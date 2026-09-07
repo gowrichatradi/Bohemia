@@ -1167,12 +1167,9 @@ function vBudget() {
     h += `</div>`;
   });
 
-  const trueTotal = grand + contingency;
   h += `<div class="bg-total">
-    <div class="bg-total-row"><span>Subtotal (known lines)</span><b>${fmtMoney(grand, ccy)}</b></div>
-    <div class="bg-total-row"><span>Contingency · 10%</span><b>${fmtMoney(contingency, ccy)}</b></div>
-    <div class="bg-total-row bg-grand"><span>Grand total</span><b>${fmtMoney(trueTotal, ccy)}</b></div>
-    ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from your receipts and this total will update.</div>` : ""}
+    <div class="bg-total-row bg-grand"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
+    ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and this total updates.</div>` : ""}
   </div>`;
   return h;
 }
