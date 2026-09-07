@@ -1,4 +1,4 @@
-const CACHE = "arctic-alpine-v47";
+const CACHE = "arctic-alpine-v48";
 const ASSETS = [
   "./",
   "./index.html",
