@@ -799,7 +799,23 @@ ul.pl strong{color:var(--ink);font-weight:600}
 <script src="app.js"></script>
 <script>
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  // Only auto-reload when an existing SW is being *replaced* — never on the
+  // first-ever install (there was no controller before, no stale code to swap).
+  const hadController = !!navigator.serviceWorker.controller;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || refreshing) return;
+    refreshing = true;
+    location.reload();
+  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Check for a new SW immediately, and again hourly while the tab is open,
+      // so the app never gets stuck on an old cache.
+      reg.update().catch(() => {});
+      setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+    }).catch(() => {});
+  });
 }
 </script>
 </body>

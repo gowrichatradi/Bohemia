@@ -1,4 +1,7 @@
-const CACHE = "arctic-alpine-v48";
+const CACHE = "arctic-alpine-v49";
+// App-shell filenames: always try network first so code/data updates
+// land as soon as you're online. Everything else stays cache-first.
+const SHELL = /\/(index\.html|app\.js|data\.js|covers\.js|manifest\.webmanifest)?$/;
 const ASSETS = [
   "./",
   "./index.html",
@@ -120,13 +123,34 @@ self.addEventListener("fetch", (e) => {
   // Don't intercept cross-origin requests (map tiles, Wikimedia images,
   // Google Fonts) — let the browser handle its own caching.
   if (url.origin !== self.location.origin) return;
+
+  const isShell = e.request.mode === "navigate" || SHELL.test(url.pathname);
+  if (isShell) {
+    // Network-first: fresh code/data whenever online, cache as fallback.
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches
+            .match(e.request)
+            .then((hit) => hit || caches.match("./index.html")),
+        ),
+    );
+    return;
+  }
+  // Cache-first for everything else (day pages, icons, images).
   e.respondWith(
     caches.match(e.request).then(
       (hit) =>
         hit ||
         fetch(e.request)
           .then((res) => {
-            // Only cache successful same-origin responses
             if (res.ok) {
               const copy = res.clone();
               caches.open(CACHE).then((c) => c.put(e.request, copy));
