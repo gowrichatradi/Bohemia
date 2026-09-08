@@ -1204,13 +1204,9 @@ function vBudget() {
     h += `</div>`;
   });
 
-  h += `<div class="bg-total">
-    <div class="bg-total-row bg-grand"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
-    <div class="bg-total-row"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
-    ${pending ? `<div class="bg-total-row"><span>Pending savings · Super Cover</span><b class="bg-ps-total">−${fmtMoney(pending, ccy).replace('bg-n', 'bg-n bg-ps-num')}</b></div>` : ""}
-    <div class="bg-total-row bg-grand"><span>Net after cashback${pending ? " + savings" : ""}</span><b>${fmtMoney(grand - cashback - pending, ccy)}</b></div>
-    ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and this total updates.</div>` : ""}
-  </div>`;
+  if (unknown) {
+    h += `<div class="bg-total"><div class="bg-note">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and the glance-card totals update.</div></div>`;
+  }
   return h;
 }
 
