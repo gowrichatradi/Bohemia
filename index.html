@@ -412,6 +412,24 @@ button.chip:active{transform:scale(.95)}
 .bg-total-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:13.5px;color:var(--ink2)}
 .bg-total-row.bg-grand{padding-top:12px;margin-top:6px;border-top:.5px solid var(--line);font-size:15px;color:var(--ink)}
 .bg-total-row.bg-grand .bg-n{font-size:20px;color:var(--dawn);font-weight:600}
+/* cashback */
+.bg-cb{font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+  color:#4b8f6d;background:rgba(75,143,109,.12);border:.5px solid rgba(75,143,109,.28);
+  border-radius:999px;padding:2px 8px}
+.bg-cb-num{color:#4b8f6d !important}
+.bg-cb-total{font-weight:600}
+.bg-sub-cb{color:#4b8f6d;font-family:var(--mono);font-size:11px;margin-left:4px}
+/* glance card at the top of the budget view */
+.bg-glance{background:linear-gradient(160deg,var(--card2) 0%,var(--card) 100%);
+  border:.5px solid var(--line);border-radius:16px;padding:14px 18px;margin:4px 0 14px;
+  box-shadow:0 12px 30px -22px rgba(0,0,0,.45)}
+.bg-glance .bg-g-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;font-size:13px;color:var(--ink2)}
+.bg-glance .bg-g-row b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.bg-glance .bg-g-cb b{color:#4b8f6d}
+.bg-glance .bg-g-net{border-top:.5px solid var(--line);margin-top:6px;padding-top:10px;
+  font-size:15px;color:var(--ink)}
+.bg-glance .bg-g-net b{font-size:20px;color:var(--dawn);font-weight:600}
 
 /* ===== segmented control ===== */
 .seg{position:relative;display:flex;background:var(--bg2);border:.5px solid var(--line);

@@ -1120,23 +1120,36 @@ function vBudget() {
   const B = DATA.budget || { currency: "AUD", categories: [] };
   const ccy = "$";
   let grand = 0,
-    unknown = 0;
-  let h = `<p class="intro">${esc(B.note || "")}</p>`;
+    unknown = 0,
+    cashback = 0;
 
   const catTotals = [];
   B.categories.forEach((c) => {
     if (c.head === "Contingency") return; // computed at the end
     let sub = 0,
-      qs = 0;
+      qs = 0,
+      cb = 0;
     c.rows.forEach((r) => {
-      if (typeof r.cash === "number") sub += r.cash;
-      else if (r.cash === null) qs += 1;
+      if (typeof r.cash === "number") {
+        sub += r.cash;
+        if (typeof r.cashback === "number") cb += r.cash * r.cashback;
+      } else if (r.cash === null) qs += 1;
     });
-    catTotals.push({ head: c.head, sub, qs });
+    catTotals.push({ head: c.head, sub, qs, cb });
     grand += sub;
     unknown += qs;
+    cashback += cb;
   });
+  cashback = Math.round(cashback);
   const contingency = Math.round(grand * 0.1);
+
+  // Glance card at the top: committed, cashback earning, net.
+  let h = `<div class="bg-glance">
+    <div class="bg-g-row"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
+    <div class="bg-g-row bg-g-cb"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
+    <div class="bg-g-row bg-g-net"><span>Net after cashback</span><b>${fmtMoney(grand - cashback, ccy)}</b></div>
+  </div>`;
+  h += `<p class="intro">${esc(B.note || "")}</p>`;
 
   B.categories.forEach((c) => {
     const ct = catTotals.find((x) => x.head === c.head);
@@ -1148,6 +1161,13 @@ function vBudget() {
         r.cash === "auto"
           ? fmtMoney(contingency, ccy)
           : fmtMoney(r.cash, ccy);
+      const cbAmt =
+        typeof r.cash === "number" && typeof r.cashback === "number"
+          ? Math.round(r.cash * r.cashback)
+          : 0;
+      const cbBadge = cbAmt
+        ? `<span class="bg-cb">${Math.round(r.cashback * 100)}% back · ${ccy}${cbAmt.toLocaleString("en-AU")}</span>`
+        : "";
       h += `<div class="bg-row">
         <div class="bg-l">
           <div class="bg-nm">${esc(r.name || "")}</div>
@@ -1156,19 +1176,25 @@ function vBudget() {
             ${r.when ? `<span class="bg-w">${esc(r.when)}</span>` : ""}
             ${r.ref ? `<button class="ref bg-ref" onclick="copyRef('${esc(String(r.ref).split(" ")[0])}')">${I.copy}${esc(r.ref)}</button>` : ""}
             ${r.tag ? `<span class="tag t-open">${esc(r.tag)}</span>` : ""}
+            ${cbBadge}
           </div>
         </div>
         <div class="bg-r">${cash}</div>
       </div>`;
     });
     if (!isContingency) {
-      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
+      const cbLine = ct.cb
+        ? ` <span class="bg-sub-cb">− ${ccy}${Math.round(ct.cb).toLocaleString("en-AU")} back</span>`
+        : "";
+      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}${cbLine}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
     }
     h += `</div>`;
   });
 
   h += `<div class="bg-total">
     <div class="bg-total-row bg-grand"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
+    <div class="bg-total-row"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
+    <div class="bg-total-row bg-grand"><span>Net after cashback</span><b>${fmtMoney(grand - cashback, ccy)}</b></div>
     ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and this total updates.</div>` : ""}
   </div>`;
   return h;
