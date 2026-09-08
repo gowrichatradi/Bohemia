@@ -1121,33 +1121,38 @@ function vBudget() {
   const ccy = "$";
   let grand = 0,
     unknown = 0,
-    cashback = 0;
+    cashback = 0,
+    pending = 0;
 
   const catTotals = [];
   B.categories.forEach((c) => {
     if (c.head === "Contingency") return; // computed at the end
     let sub = 0,
       qs = 0,
-      cb = 0;
+      cb = 0,
+      ps = 0;
     c.rows.forEach((r) => {
       if (typeof r.cash === "number") {
         sub += r.cash;
         if (typeof r.cashback === "number") cb += r.cash * r.cashback;
       } else if (r.cash === null) qs += 1;
+      if (typeof r.pendingSaving === "number") ps += r.pendingSaving;
     });
-    catTotals.push({ head: c.head, sub, qs, cb });
+    catTotals.push({ head: c.head, sub, qs, cb, ps });
     grand += sub;
     unknown += qs;
     cashback += cb;
+    pending += ps;
   });
   cashback = Math.round(cashback);
   const contingency = Math.round(grand * 0.1);
 
-  // Glance card at the top: committed, cashback earning, net.
+  // Glance card at the top: committed, cashback earning, pending savings, net.
   let h = `<div class="bg-glance">
     <div class="bg-g-row"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
     <div class="bg-g-row bg-g-cb"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
-    <div class="bg-g-row bg-g-net"><span>Net after cashback</span><b>${fmtMoney(grand - cashback, ccy)}</b></div>
+    ${pending ? `<div class="bg-g-row bg-g-ps"><span>Pending savings · Super Cover decline</span><b class="bg-ps-total">−${fmtMoney(pending, ccy).replace('bg-n', 'bg-n bg-ps-num')}</b></div>` : ""}
+    <div class="bg-g-row bg-g-net"><span>Net after cashback${pending ? " + savings" : ""}</span><b>${fmtMoney(grand - cashback - pending, ccy)}</b></div>
   </div>`;
   h += `<p class="intro">${esc(B.note || "")}</p>`;
 
@@ -1168,6 +1173,10 @@ function vBudget() {
       const cbBadge = cbAmt
         ? `<span class="bg-cb">${Math.round(r.cashback * 100)}% back · ${ccy}${cbAmt.toLocaleString("en-AU")}</span>`
         : "";
+      const psBadge =
+        typeof r.pendingSaving === "number" && r.pendingSaving > 0
+          ? `<span class="bg-ps">Save ${ccy}${r.pendingSaving.toLocaleString("en-AU")} · decline Super Cover at desk</span>`
+          : "";
       h += `<div class="bg-row">
         <div class="bg-l">
           <div class="bg-nm">${esc(r.name || "")}</div>
@@ -1177,6 +1186,7 @@ function vBudget() {
             ${r.ref ? `<button class="ref bg-ref" onclick="copyRef('${esc(String(r.ref).split(" ")[0])}')">${I.copy}${esc(r.ref)}</button>` : ""}
             ${r.tag ? `<span class="tag t-open">${esc(r.tag)}</span>` : ""}
             ${cbBadge}
+            ${psBadge}
           </div>
         </div>
         <div class="bg-r">${cash}</div>
@@ -1186,7 +1196,10 @@ function vBudget() {
       const cbLine = ct.cb
         ? ` <span class="bg-sub-cb">− ${ccy}${Math.round(ct.cb).toLocaleString("en-AU")} back</span>`
         : "";
-      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}${cbLine}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
+      const psLine = ct.ps
+        ? ` <span class="bg-sub-ps">− ${ccy}${ct.ps.toLocaleString("en-AU")} pending</span>`
+        : "";
+      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}${cbLine}${psLine}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
     }
     h += `</div>`;
   });
@@ -1194,7 +1207,8 @@ function vBudget() {
   h += `<div class="bg-total">
     <div class="bg-total-row bg-grand"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
     <div class="bg-total-row"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
-    <div class="bg-total-row bg-grand"><span>Net after cashback</span><b>${fmtMoney(grand - cashback, ccy)}</b></div>
+    ${pending ? `<div class="bg-total-row"><span>Pending savings · Super Cover</span><b class="bg-ps-total">−${fmtMoney(pending, ccy).replace('bg-n', 'bg-n bg-ps-num')}</b></div>` : ""}
+    <div class="bg-total-row bg-grand"><span>Net after cashback${pending ? " + savings" : ""}</span><b>${fmtMoney(grand - cashback - pending, ccy)}</b></div>
     ${unknown ? `<div class="bg-note" style="margin-top:8px">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and this total updates.</div>` : ""}
   </div>`;
   return h;
