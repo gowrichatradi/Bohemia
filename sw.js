@@ -1,4 +1,4 @@
-const CACHE = "arctic-alpine-v52";
+const CACHE = "arctic-alpine-v53";
 // App-shell filenames: always try network first so code/data updates
 // land as soon as you're online. Everything else stays cache-first.
 const SHELL = /\/(index\.html|app\.js|data\.js|covers\.js|manifest\.webmanifest)?$/;
