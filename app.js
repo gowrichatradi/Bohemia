@@ -1086,6 +1086,7 @@ function vBook() {
     { name: "Cars", groups: [bookGroup(/^Cars/)].filter(Boolean) },
     { name: "Stays", groups: [bookGroup("Where you sleep")].filter(Boolean) },
     { name: "Budget", budget: true },
+    { name: "Live", live: true },
   ];
   const bk = Math.min(S.bk || 0, TABS.length - 1);
   h +=
@@ -1098,6 +1099,8 @@ function vBook() {
 
   if (TABS[bk].budget) {
     h += vBudget();
+  } else if (TABS[bk].live) {
+    h += vLive();
   } else {
     h += `<p class="intro">Tap a reference to copy it.</p>`;
     TABS[bk].groups.forEach((g) => {
@@ -1206,6 +1209,125 @@ function vBudget() {
 
   if (unknown) {
     h += `<div class="bg-total"><div class="bg-note">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and the glance-card totals update.</div></div>`;
+  }
+  return h;
+}
+
+/* ---------- live expense log (device-local) ---------- */
+// Rates match the Budget view — NOK/EUR from data.js note, DKK/CZK added.
+const FX = { AUD: 1, NOK: 0.139, EUR: 1.654, DKK: 0.222, CZK: 0.067, SGD: 1.14, USD: 1.55 };
+const LIVE_KEY = "bohemia-live-spend-v1";
+const LIVE_CATS = ["Food", "Transport", "Fuel", "Groceries", "Tickets", "Shopping", "Misc"];
+
+function liveRead() {
+  try { return JSON.parse(localStorage.getItem(LIVE_KEY) || "[]"); }
+  catch { return []; }
+}
+function liveWrite(list) {
+  try { localStorage.setItem(LIVE_KEY, JSON.stringify(list)); } catch {}
+}
+function liveAdd() {
+  const g = (id) => document.getElementById(id);
+  const amt = parseFloat(g("lv-amt").value);
+  const ccy = g("lv-ccy").value;
+  const cat = g("lv-cat").value;
+  const note = g("lv-note").value.trim();
+  const date = g("lv-date").value || todayLocal();
+  if (!amt || amt <= 0) {
+    g("lv-amt").focus();
+    return;
+  }
+  const list = liveRead();
+  list.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date, amt, ccy, cat, note,
+  });
+  liveWrite(list);
+  toast(`Added ${ccy} ${amt}`);
+  render();
+}
+function liveDelete(id) {
+  const list = liveRead().filter((e) => e.id !== id);
+  liveWrite(list);
+  render();
+}
+function liveExport() {
+  const list = liveRead();
+  if (!list.length) return toast("Nothing to export yet");
+  const rows = [["date", "amount", "currency", "category", "note", "aud"]]
+    .concat(list.map((e) => [e.date, e.amt, e.ccy, e.cat, e.note.replace(/[\r\n,]/g, " "), (e.amt * (FX[e.ccy] || 1)).toFixed(2)]))
+    .map((r) => r.join(",")).join("\n");
+  const blob = new Blob([rows], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bohemia-expenses-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function todayLocal() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function vLive() {
+  const list = liveRead().slice().sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  const today = todayLocal();
+  const totals = {};
+  let grandAUD = 0;
+  list.forEach((e) => {
+    const aud = e.amt * (FX[e.ccy] || 1);
+    totals[e.cat] = (totals[e.cat] || 0) + aud;
+    grandAUD += aud;
+  });
+
+  let h = `<div class="lv-form">
+    <div class="lv-row">
+      <input id="lv-amt" class="lv-in lv-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+      <select id="lv-ccy" class="lv-in lv-ccy">
+        ${Object.keys(FX).map((c) => `<option value="${c}"${c === "NOK" ? " selected" : ""}>${c}</option>`).join("")}
+      </select>
+      <select id="lv-cat" class="lv-in lv-cat">
+        ${LIVE_CATS.map((c) => `<option>${c}</option>`).join("")}
+      </select>
+    </div>
+    <div class="lv-row">
+      <input id="lv-date" class="lv-in lv-date" type="date" value="${today}">
+      <input id="lv-note" class="lv-in lv-note" placeholder="Note (optional)">
+    </div>
+    <button class="lv-add" onclick="liveAdd()">Add expense</button>
+  </div>`;
+
+  if (list.length) {
+    h += `<div class="lv-glance">
+      <div class="lv-g-row lv-g-net"><span>Live spend so far</span><b>$${Math.round(grandAUD).toLocaleString("en-AU")}</b></div>
+      ${Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+        `<div class="lv-g-row"><span>${esc(k)}</span><b>$${Math.round(v).toLocaleString("en-AU")}</b></div>`
+      ).join("")}
+    </div>`;
+    h += `<div class="lv-list">` +
+      list.map((e) => {
+        const aud = Math.round(e.amt * (FX[e.ccy] || 1));
+        return `<div class="lv-item">
+          <div class="lv-item-l">
+            <div class="lv-item-top">
+              <span class="lv-item-cat">${esc(e.cat)}</span>
+              <span class="lv-item-date">${esc(e.date)}</span>
+            </div>
+            ${e.note ? `<div class="lv-item-note">${esc(e.note)}</div>` : ""}
+          </div>
+          <div class="lv-item-r">
+            <div class="lv-item-amt">${esc(e.ccy)} ${e.amt.toLocaleString("en-AU", { maximumFractionDigits: 2 })}</div>
+            <div class="lv-item-aud">$${aud.toLocaleString("en-AU")}</div>
+          </div>
+          <button class="lv-item-x" onclick="liveDelete('${e.id}')" aria-label="Delete">×</button>
+        </div>`;
+      }).join("") +
+      `</div>`;
+    h += `<div class="lv-tools"><button class="lv-tool" onclick="liveExport()">Export CSV</button></div>`;
+  } else {
+    h += `<div class="lv-empty">No expenses yet. Add one above and it'll show up here — saved on this device only.</div>`;
   }
   return h;
 }

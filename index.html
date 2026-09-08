@@ -439,6 +439,53 @@ button.chip:active{transform:scale(.95)}
 .bg-sub-ps{color:#c58a2d;font-family:var(--mono);font-size:11px;margin-left:4px}
 .bg-glance .bg-g-ps b{color:#c58a2d}
 
+/* ===== live spend log ===== */
+.lv-form{background:linear-gradient(160deg,var(--card2) 0%,var(--card) 100%);
+  border:.5px solid var(--line);border-radius:16px;padding:14px;margin:4px 0 14px}
+.lv-row{display:flex;gap:8px;margin-bottom:8px}
+.lv-in{flex:1;min-width:0;background:var(--bg2);border:.5px solid var(--line);
+  border-radius:9px;padding:10px 11px;color:var(--ink);font-size:14px;
+  font-family:inherit;letter-spacing:-.01em}
+.lv-in:focus{outline:none;border-color:var(--dawn)}
+.lv-amt{flex:2;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lv-ccy,.lv-cat{flex:1.1}
+.lv-date{flex:1.2;font-family:var(--mono);font-size:13px}
+.lv-note{flex:2}
+.lv-add{width:100%;background:var(--dawn);color:#fff;border:none;
+  border-radius:9px;padding:11px;font-size:14px;font-weight:600;letter-spacing:.02em;
+  margin-top:2px;transition:opacity .2s}
+.lv-add:active{opacity:.75}
+.lv-glance{background:var(--card);border:.5px solid var(--line);border-radius:16px;
+  padding:14px 18px;margin-bottom:10px}
+.lv-g-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:5px 0;font-size:13px;color:var(--ink3)}
+.lv-g-row b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.lv-g-net{border-bottom:.5px solid var(--line);margin-bottom:6px;padding-bottom:10px;
+  font-size:15px;color:var(--ink)}
+.lv-g-net b{font-size:20px;color:var(--dawn);font-weight:600}
+.lv-list{margin-bottom:12px}
+.lv-item{display:flex;gap:10px;align-items:flex-start;
+  background:var(--card);border:.5px solid var(--line);border-radius:12px;
+  padding:11px 12px;margin-bottom:6px;position:relative}
+.lv-item-l{flex:1;min-width:0}
+.lv-item-top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.lv-item-cat{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.lv-item-date{font-family:var(--mono);font-size:10.5px;color:var(--ink3);letter-spacing:.04em}
+.lv-item-note{font-size:12px;color:var(--ink2);margin-top:3px;line-height:1.4}
+.lv-item-r{flex:0 0 auto;text-align:right;padding-right:22px}
+.lv-item-amt{font-family:var(--mono);font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.lv-item-aud{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-top:1px}
+.lv-item-x{position:absolute;top:8px;right:8px;width:22px;height:22px;
+  border-radius:50%;background:transparent;color:var(--ink3);font-size:18px;line-height:20px;
+  padding:0;opacity:.55}
+.lv-item-x:active{opacity:1;color:var(--warn)}
+.lv-tools{display:flex;justify-content:flex-end;margin-bottom:16px}
+.lv-tool{background:var(--card2);border:.5px solid var(--line);border-radius:9px;
+  padding:7px 12px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink3)}
+.lv-empty{background:var(--card);border:.5px dashed var(--line);border-radius:14px;
+  padding:22px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.5}
+
 /* ===== segmented control ===== */
 .seg{position:relative;display:flex;background:var(--bg2);border:.5px solid var(--line);
   border-radius:12px;padding:3px;margin:14px 0 6px}
