@@ -45,17 +45,49 @@ header.pg{margin-bottom:22px}
   color:var(--gold);margin-bottom:8px}
 h1{font-family:var(--sys);font-size:32px;line-height:1.15;letter-spacing:-.028em;font-weight:700;margin:0 0 12px;color:var(--ink)}
 .lede{color:var(--ink2);font-size:16.5px;line-height:1.55;margin:0;font-family:var(--sys);font-weight:400}
-.place{background:var(--card);border:.5px solid var(--line);border-radius:16px;
-  padding:18px 20px;margin:14px 0;
-  box-shadow:0 12px 30px -18px rgba(0,0,0,.5)}
-.place h2{font-family:var(--sys);font-size:20px;letter-spacing:-.018em;margin:0 0 4px;font-weight:600;color:var(--ink)}
-.place .meta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink3);margin:0 0 10px}
-.place p{margin:8px 0;color:var(--ink2);font-size:15px;line-height:1.55}
+/* Shop-page cards — refreshed so the meta chip pops and kids sections stand apart. */
+.place{position:relative;background:var(--card);border:.5px solid var(--line);border-radius:16px;
+  padding:20px 22px 20px 24px;margin:14px 0;
+  box-shadow:0 14px 32px -20px rgba(0,0,0,.55);
+  transition:transform .18s ease,border-color .18s ease}
+/* left-accent bar keyed to the meta pill */
+.place::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:2px;
+  background:var(--line);transition:background .18s ease}
+.place:hover{transform:translateY(-1px);border-color:rgba(217,164,65,.28)}
+.place h2{font-family:var(--sys);font-size:19.5px;letter-spacing:-.018em;margin:0 0 6px;font-weight:600;color:var(--ink)}
+/* meta chip — a real pill in colour, not a label */
+.place .meta{display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);background:rgba(95,114,122,.14);
+  border:.5px solid rgba(95,114,122,.28);border-radius:999px;
+  padding:3px 9px;margin:0 0 12px;font-weight:600}
+/* Must / Worth it / If time / For the little one — chip colour per tier */
+.place[data-tier="must"]::before{background:var(--gold)}
+.place[data-tier="must"] .meta{color:var(--gold);
+  background:rgba(217,164,65,.15);border-color:rgba(217,164,65,.4)}
+.place[data-tier="worth"]::before{background:var(--fjord)}
+.place[data-tier="worth"] .meta{color:var(--fjord);
+  background:rgba(107,182,206,.13);border-color:rgba(107,182,206,.36)}
+.place[data-tier="iftime"]::before{background:var(--ink3)}
+.place[data-tier="iftime"] .meta{color:var(--ink2);
+  background:rgba(95,114,122,.14);border-color:rgba(95,114,122,.32)}
+.place[data-tier="kid"]::before{background:var(--kid)}
+.place[data-tier="kid"] .meta{color:#E9DBFF;
+  background:rgba(183,154,230,.16);border-color:rgba(183,154,230,.40)}
+.place[data-tier="kid"]{background:linear-gradient(160deg,rgba(183,154,230,.08),transparent 55%),var(--card);
+  border-color:rgba(183,154,230,.24)}
+.place p{margin:8px 0;color:var(--ink2);font-size:15px;line-height:1.6}
+.place p:first-of-type{margin-top:0}
+.place p:last-of-type{margin-bottom:0}
 .place p.hist{color:var(--ink2)}
 .place p.spec{color:var(--ink)}
 .place p.spec b{color:var(--gold);font-weight:600;font-family:var(--mono);font-size:10px;
   letter-spacing:.12em;text-transform:uppercase;display:inline-block;margin-right:6px}
+/* section divider — sits between broad chapters when the page groups them */
+.shop-section-head{display:flex;align-items:center;gap:12px;margin:28px 0 4px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink3)}
+.shop-section-head::before,.shop-section-head::after{content:"";flex:1;height:.5px;background:var(--line)}
 .nav{display:flex;gap:8px;margin-top:26px}
 .nav a{flex:1;background:var(--card);border:.5px solid var(--line);border-radius:12px;
   padding:11px 12px;text-decoration:none;color:var(--ink2);font-size:13px;min-width:0}
@@ -68,6 +100,68 @@ h1{font-family:var(--sys);font-size:32px;line-height:1.15;letter-spacing:-.028em
 
 /* did-you-know trivia strip — a light pull-quote sitting just under the lede */
 .trivia{background:linear-gradient(160deg,rgba(107,182,206,.09),rgba(217,164,65,.05));border:.5px solid var(--line);border-radius:14px;padding:14px 18px;margin:16px 0 4px;position:relative;font-family:var(--sys);font-size:14.5px;line-height:1.55;color:var(--ink2);font-weight:400}
+
+/* value strip — DFO / outlet / cheap store for the day, sits under the lede */
+.value-strip{background:linear-gradient(160deg,rgba(217,164,65,.14),rgba(232,168,96,.06));
+  border:.5px solid rgba(217,164,65,.36);border-radius:14px;
+  padding:14px 18px;margin:16px 0 4px}
+.value-strip .value-tag{display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);font-weight:600;margin-bottom:6px}
+.value-strip h3{font-family:var(--sys);font-size:17px;font-weight:600;
+  letter-spacing:-.015em;margin:0 0 4px;color:var(--ink)}
+.value-strip p{margin:4px 0 0;color:var(--ink2);font-size:14px;line-height:1.55}
+.value-strip.none{background:linear-gradient(160deg,rgba(95,114,122,.10),rgba(38,51,58,.05));
+  border-color:rgba(95,114,122,.30)}
+.value-strip.none .value-tag{color:var(--ink3)}
+
+/* ===== sticker strip — the day's best local sticker source ===== */
+/* One sheet-of-stickers card with a perforated top edge and two
+   sub-picks side-by-side (stacks below 460 px). */
+.sticker-strip{position:relative;padding:20px 20px 18px;margin:12px 0 8px;
+  background:
+    /* soft violet wash */
+    linear-gradient(165deg,rgba(183,154,230,.18),rgba(183,154,230,.04) 68%),
+    var(--card);
+  border:.5px solid rgba(183,154,230,.34);border-radius:16px;
+  box-shadow:0 12px 30px -20px rgba(0,0,0,.6),
+             0 1px 0 rgba(255,255,255,.03) inset;
+  overflow:hidden}
+/* perforated tape running along the very top — reads as a sticker sheet */
+.sticker-strip::before{content:"";position:absolute;left:14px;right:14px;top:8px;height:3px;
+  background-image:radial-gradient(circle,rgba(183,154,230,.55) 1.2px,transparent 1.6px);
+  background-size:8px 3px;background-repeat:repeat-x;opacity:.7;pointer-events:none}
+/* subtle rotated tape corner accent (top-left) */
+.sticker-strip::after{content:"";position:absolute;top:-16px;left:-22px;width:70px;height:16px;
+  background:linear-gradient(90deg,rgba(183,154,230,.28),rgba(183,154,230,.08));
+  transform:rotate(-14deg);border-radius:2px;pointer-events:none}
+.sticker-strip .sticker-tag{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--kid);font-weight:600;margin:2px 0 8px}
+.sticker-strip h3{font-family:var(--sys);font-size:17.5px;font-weight:600;
+  letter-spacing:-.018em;line-height:1.3;margin:0 0 14px;color:var(--ink)}
+/* two-column pick grid */
+.sticker-picks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:520px){.sticker-picks{grid-template-columns:1fr;gap:12px}}
+.sticker-pick{position:relative;background:rgba(11,15,19,.32);
+  border:.5px solid rgba(183,154,230,.22);border-radius:12px;
+  padding:12px 14px 13px}
+.sticker-pick .sticker-who{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:#E9DBFF;background:rgba(183,154,230,.20);
+  border:.5px solid rgba(183,154,230,.38);border-radius:999px;
+  padding:3px 9px;margin:0 0 8px;font-weight:600}
+.sticker-pick.for-her .sticker-who{color:#F6E5FF;background:rgba(217,164,213,.20);border-color:rgba(217,164,213,.45)}
+.sticker-pick.for-you .sticker-who{color:#CFE8F5;background:rgba(107,182,206,.16);border-color:rgba(107,182,206,.40)}
+.sticker-pick p{margin:0;color:var(--ink2);font-size:13.5px;line-height:1.55}
+.sticker-pick p b{color:var(--ink);font-weight:600}
+/* "none" variant — quiet grey, no perforation drama */
+.sticker-strip.none{padding:14px 18px;
+  background:linear-gradient(160deg,rgba(95,114,122,.10),rgba(38,51,58,.05));
+  border-color:rgba(95,114,122,.28);box-shadow:none}
+.sticker-strip.none::before,.sticker-strip.none::after{display:none}
+.sticker-strip.none .sticker-tag{color:var(--ink3);margin-bottom:6px}
+.sticker-strip.none p{margin:0;color:var(--ink2);font-size:14px;line-height:1.55}
 .trivia b{font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--fjord);display:block;margin-bottom:6px;font-weight:500}
 

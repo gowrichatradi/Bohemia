@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Arctic → Alpine">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preload" as="image" href="./images/hero.jpg" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -185,6 +186,23 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
 .chip.sun .s-s{color:var(--dusk)}
 button.chip{transition:transform .12s var(--ease),background .2s}
 button.chip:active{transform:scale(.95)}
+
+/* kid-mode toggle chip in the Guide → Child tab */
+.chip.kid-toggle{background:rgba(183,154,230,.14);color:var(--kid);
+  border:.5px solid rgba(183,154,230,.32);padding:9px 13px}
+.chip.kid-toggle.on{background:rgba(183,154,230,.24);
+  border-color:rgba(183,154,230,.55);color:#F2E8FF}
+
+/* kid-mode banner shown at the top of every filtered day timeline */
+.kid-banner{display:flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--kid);background:rgba(183,154,230,.10);
+  border:.5px solid rgba(183,154,230,.28);border-radius:10px;
+  padding:9px 13px;margin:0 0 14px;cursor:pointer;
+  transition:background .2s,border-color .2s}
+.kid-banner:hover{background:rgba(183,154,230,.16)}
+.kid-banner .kid-dot{width:7px;height:7px;border-radius:50%;background:var(--kid);
+  box-shadow:0 0 8px rgba(183,154,230,.7)}
 
 /* ===== cards ===== */
 .card{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;
@@ -583,8 +601,11 @@ ul.pl strong{color:var(--ink);font-weight:600}
 .mag-cover{margin:0 -18px 22px;color:#F5F1E8;letter-spacing:-.02em;position:relative}
 /* Poster art — its own block, respects the landscape 3:2 aspect */
 .mag-poster{position:relative;width:100%;aspect-ratio:3/2;overflow:hidden;background:#0B0F13;isolation:isolate}
-.mag-photo{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;
-  animation:magPan 30s ease-in-out infinite alternate;will-change:transform}
+.mag-photo{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:center;
+  display:block;opacity:0;transform:scale(1.05);
+  transition:opacity .45s ease-out;will-change:transform,opacity;
+  background:#0B0F13}
+.mag-photo.ready{opacity:1;animation:magPan 30s ease-in-out infinite alternate}
 /* Meta card below the poster — countdown + title + description */
 .mag-inner-wrap{padding:26px 24px 10px}
 /* very light paper-grain texture — kept for texture, not stylization */
@@ -702,6 +723,14 @@ ul.pl strong{color:var(--ink);font-weight:600}
 .dish .dp{font-family:var(--mono);font-size:10.5px;color:var(--gold);letter-spacing:.06em;
   margin-top:2px}
 .dish .dd{font-size:14px;color:var(--ink2);margin-top:6px;line-height:1.5}
+/* dishes we don't eat — kept for reference, visually dimmed with an inline chip */
+.dish-avoid{opacity:.62;border-color:rgba(232,115,90,.28)}
+.dish-avoid .dn{color:var(--ink2)}
+.avoid-chip{display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--warn);background:rgba(232,115,90,.12);
+  border:.5px solid rgba(232,115,90,.32);border-radius:6px;
+  padding:2px 6px;font-weight:500;vertical-align:middle}
 
 /* ===== compact inline sun-bar in the hero ===== */
 .sunline{display:flex;align-items:center;gap:8px;margin-top:12px;

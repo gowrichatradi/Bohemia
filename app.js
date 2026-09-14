@@ -329,6 +329,8 @@ const KIND2PHASE = {
   cafe: "stops",
   mkt: "stops",
   shop: "stops",
+  detour: "stops",
+  cheap: "stops",
   kid: "kid",
   dusk: "evening",
   eve: "evening",
@@ -341,13 +343,35 @@ const KIND_LABEL = {
   mkt: "Provisions",
   cafe: "Coffee & a bite",
   shop: "Shop / souvenirs",
+  detour: "Detour worth taking",
+  cheap: "Cheapest eats",
   also: "Also",
   eve: "Evening",
 };
-const KIND_ICON = { mkt: I.shop, cafe: I.cup, shop: I.shop };
+const KIND_ICON = { mkt: I.shop, cafe: I.cup, shop: I.shop, detour: I.pin, cheap: I.cup };
 
 /* ---------- state ---------- */
-const S = { view: "today", day: null, seg: 0, bk: 0, q: "" };
+const S = {
+  view: "today",
+  day: null,
+  seg: 0,
+  bk: 0,
+  q: "",
+  /* kidMode filters day timelines to just the toddler-relevant parts —
+     kid highlights, food stops, afternoon plan and any safety warnings —
+     hiding dawn shoots, driving detail, dusk photography and adult tips.
+     Persisted in localStorage so the toggle survives reloads. */
+  kidMode: (() => {
+    try { return localStorage.getItem("kidMode") === "1"; } catch (_) { return false; }
+  })(),
+};
+function setKidMode(on) {
+  S.kidMode = !!on;
+  try { localStorage.setItem("kidMode", S.kidMode ? "1" : "0"); } catch (_) {}
+  render();
+}
+/* Which part-kinds survive kid mode. */
+const KID_KINDS = new Set(["kid", "aft", "cafe", "mkt", "shop", "detour", "cheap", "warn"]);
 const TAB_INDEX = { today: 0, days: 1, book: 2, info: 3 };
 
 /* ---------- helpers ---------- */
@@ -401,9 +425,25 @@ function dateShort(d) {
 /* phases that anchor time — an "also" block inherits the last one it followed */
 const ANCHOR = { dawn: 1, day: 1, evening: 1 };
 function groupParts(parts) {
+  /* In kid mode, drop dawn shoots, driving narrative, dusk photography
+     and adult tips. Keep an "also" block only if the anchor it inherits
+     from is one we're also keeping — otherwise it loses context. */
+  const src = S.kidMode
+    ? parts.filter((p) => {
+        if (p.k === "also") {
+          // walk backwards to the anchor and check it survives
+          const idx = parts.indexOf(p);
+          for (let j = idx - 1; j >= 0; j--) {
+            if (ANCHOR[KIND2PHASE[parts[j].k]]) return KID_KINDS.has(parts[j].k);
+          }
+          return false;
+        }
+        return KID_KINDS.has(p.k);
+      })
+    : parts;
   const g = {};
   let last = "day";
-  parts.forEach((p) => {
+  src.forEach((p) => {
     const ph = p.k === "also" ? last : KIND2PHASE[p.k] || "day";
     if (p.k !== "also" && ANCHOR[ph]) last = ph;
     (g[ph] = g[ph] || []).push(p);
@@ -448,7 +488,13 @@ function renderPart(p) {
 function timeline(d) {
   const g = groupParts(d.parts);
   let n = 0,
-    h = '<div class="tl">';
+    h = "";
+  if (S.kidMode) {
+    h += `<div class="kid-banner" onclick="setKidMode(false)" title="Turn kid mode off">
+      <span class="kid-dot"></span>Kid mode on · tap to show the full day
+    </div>`;
+  }
+  h += '<div class="tl">';
   PHASE_ORDER.forEach((ph) => {
     const parts = g[ph];
     if (!parts || !parts.length) return;
@@ -546,7 +592,9 @@ function vToday() {
       ${
         coverImg
           ? `<div class="mag-poster">
-        <div class="mag-photo" style="background-image:url('${coverImg.replace(/'/g, "%27")}')"></div>
+        <img class="mag-photo${window.heroLoadedOnce ? " ready" : ""}" src="${coverImg}" alt=""
+          decoding="async" fetchpriority="high"
+          onload="this.classList.add('ready');window.heroLoadedOnce=true">
       </div>`
           : ""
       }
@@ -1351,12 +1399,14 @@ const DISHES = [
         g: "pork meatballs",
         p: "90–140 DKK",
         d: "Pan-fried pork or veal meatballs with brown gravy and potatoes. Every canteen and every home makes them.",
+        avoid: "pork",
       },
       {
         n: "Stegt flæsk",
         g: "crispy pork with parsley sauce",
         p: "150–200 DKK",
         d: "Officially voted Denmark's national dish in 2014. Slabs of crackling pork with new potatoes and a creamy parsley sauce.",
+        avoid: "pork",
       },
       {
         n: "Kanelsnegle",
@@ -1433,12 +1483,14 @@ const DISHES = [
         g: "roast pork knuckle",
         p: "€18–26",
         d: "Whole pork knuckle roasted until the skin blisters into crackling. A single portion feeds two. Order with dumplings and sauerkraut.",
+        avoid: "pork",
       },
       {
         n: "Weißwurst",
         g: "white sausage",
         p: "€3–5 each",
         d: "Bavarian veal-and-pork sausage eaten only before noon — traditionally with sweet mustard, a pretzel and a wheat beer. Peel the skin before eating.",
+        avoid: "veal + pork",
       },
       {
         n: "Kaiserschmarrn",
@@ -1475,7 +1527,8 @@ const DISHES = [
         n: "Wiener Schnitzel",
         g: "veal cutlet",
         p: "€18–28",
-        d: "Real Wiener Schnitzel is veal (not pork). Thin, breaded, fried. The pork version is called Schnitzel Wiener Art — legally required to be labelled differently.",
+        d: "Real Wiener Schnitzel is veal (not pork). Thin, breaded, fried. The pork version is called Schnitzel Wiener Art — legally required to be labelled differently. Chicken (Hühnerschnitzel / Backhendl) is on most menus as a swap.",
+        avoid: "veal",
       },
       {
         n: "Zaunerstollen",
@@ -1494,6 +1547,7 @@ const DISHES = [
         g: "boiled beef",
         p: "€22–34",
         d: "Boiled beef with root vegetables, apple-horseradish sauce, and chive potatoes. Franz Joseph ate it almost every day for 60 years.",
+        avoid: "beef",
       },
       {
         n: "Kaiserschmarrn",
@@ -1519,12 +1573,14 @@ const DISHES = [
         g: "beef in cream sauce",
         p: "220–320 CZK · $14–20",
         d: "Beef sirloin in a creamy root-vegetable sauce with cranberry jam and bread dumplings. The national dish.",
+        avoid: "beef",
       },
       {
         n: "Vepřo knedlo zelo",
         g: "pork, dumplings, cabbage",
         p: "180–280 CZK",
         d: "The other national dish. Roast pork with houskový knedlík (bread dumplings) and stewed sauerkraut. Every pub.",
+        avoid: "pork",
       },
       {
         n: "Trdelník",
@@ -1554,7 +1610,11 @@ const DISHES = [
   },
 ];
 function vDishes() {
-  return DISHES.map(
+  const legend = `<p class="intro" style="margin:0 0 14px;color:var(--ink2);font-size:13px">
+    <span class="avoid-chip">🚫 not for us</span> marks dishes with beef, pork or veal —
+    kept in so you know what you're being offered.
+  </p>`;
+  return legend + DISHES.map(
     (country) =>
       `
     <div class="grph" style="color:${country.accent}">${esc(country.c)}</div>
@@ -1562,8 +1622,10 @@ function vDishes() {
     <div class="dishes">` +
       country.items
         .map(
-          (it) => `<div class="dish">
-      <div class="dn">${esc(it.n)}<span class="dg">${esc(it.g)}</span></div>
+          (it) => `<div class="dish${it.avoid ? " dish-avoid" : ""}">
+      <div class="dn">${esc(it.n)}<span class="dg">${esc(it.g)}</span>${
+        it.avoid ? `<span class="avoid-chip">🚫 ${esc(it.avoid)}</span>` : ""
+      }</div>
       <div class="dp">${esc(it.p)}</div>
       <div class="dd">${fmt(it.d)}</div>
     </div>`,
@@ -1607,7 +1669,23 @@ function vInfo() {
       DATA.wearGroups && DATA.wearGroups.length
         ? groupsHTML(DATA.wearGroups)
         : listHTML(DATA.wear);
-  if (S.seg === 5) h += listHTML(DATA.kid);
+  if (S.seg === 5) {
+    // Kid-mode toggle sits at the top of the Child tab.
+    const on = S.kidMode;
+    h += `<div class="card fade" style="margin-top:12px">
+      <div class="lab">${I.kite || ""}Kid mode</div>
+      <div class="muted" style="font-size:13.5px;margin-bottom:12px">
+        Filter every day down to the parts that matter for the toddler —
+        highlights she'll remember, food stops, afternoons and any safety warnings.
+        Dawn shoots, drive detail and adult tips are hidden.
+      </div>
+      <button class="chip kid-toggle ${on ? "on" : ""}"
+        onclick="setKidMode(${on ? "false" : "true"})">
+        ${on ? "✓ Kid mode on — tap to turn off" : "Turn kid mode on"}
+      </button>
+    </div>`;
+    h += listHTML(DATA.kid);
+  }
   // Force-refresh utility — sits at the bottom of every Guide tab.
   h += `<div class="card fade" style="margin-top:24px"><div class="lab">${I.warn}App cache</div>
     <div class="muted" style="font-size:13.5px;margin-bottom:12px">
@@ -1626,6 +1704,10 @@ function vInfo() {
    render() (the 60-s tick, tab switch, resume). We animate exactly
    once per session; subsequent renders just show the final number. */
 let magCountedOnce = true; /* skip count-up — was flickering */
+/* heroLoadedOnce — after first successful load, subsequent renders skip
+   the fade-in so the cover no longer flickers on tab switches. Kept on
+   window so the inline onload handler can flip it. */
+if (typeof window.heroLoadedOnce === "undefined") window.heroLoadedOnce = false;
 function magAnimate() {
   const el = document.getElementById("magCdNum");
   if (!el) return;
