@@ -1033,11 +1033,24 @@ function vDay(i) {
   const prev = DATA.days[i - 1],
     next = DATA.days[i + 1];
   const dayNum = String(i + 1).padStart(2, "0");
-  const histLink = `<a href="history/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(217,164,65,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(217,164,65,.28);margin:6px 6px 2px 0">Background &amp; specials <span aria-hidden="true">↗</span></a>`;
-  // Shop link — same treatment, fjord-blue accent; every day now has a shop page
-  const shopLink = `<a href="shop/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fjord);background:rgba(107,182,206,.1);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(107,182,206,.28);margin:6px 6px 2px 0">Shop &amp; souvenirs <span aria-hidden="true">↗</span></a>`;
-  // Stories link — myths, legends, folklore for the places on this day; violet accent
-  const storyLink = `<a href="stories/day-${dayNum}.html" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#B084E0;background:rgba(176,132,224,.10);padding:9px 13px;border-radius:9px;text-decoration:none;border:.5px solid rgba(176,132,224,.28);margin:6px 0 2px">Stories &amp; legends <span aria-hidden="true">↗</span></a>`;
+  // Inline spotlights — three teaser cards, each linking to its deep-dive page.
+  // Each pulls two bullets from d.spot (background / shop / stories).
+  const sp = d.spot || { hist: [], shop: [], story: [] };
+  function spotCard(kind, label, href, bullets) {
+    const items = (bullets && bullets.length)
+      ? '<ul>' + bullets.map((b) => `<li>${esc(b)}</li>`).join('') + '</ul>'
+      : '';
+    return `<a class="spotcard" data-kind="${kind}" href="${href}">
+      <div class="sc-lab">${label}</div>
+      ${items}
+      <div class="sc-more">Read more <span aria-hidden="true">↗</span></div>
+    </a>`;
+  }
+  const spotlights = `<div class="spotlights">
+    ${spotCard('hist', 'Background', `history/day-${dayNum}.html`, sp.hist)}
+    ${spotCard('shop', 'Shop &amp; souvenirs', `shop/day-${dayNum}.html`, sp.shop)}
+    ${spotCard('story', 'Stories &amp; legends', `stories/day-${dayNum}.html`, sp.story)}
+  </div>`;
   // aurora teaser on Lofoten leg days (index 2..6 → Reine and Svolvær)
   const isLofoten = i >= 2 && i <= 6;
   const aurora = isLofoten ? auroraCard(d) : "";
@@ -1045,9 +1058,7 @@ function vDay(i) {
   let h =
     `<button class="back" onclick="backToDays()">${I.chev}All days</button>` +
     heroFor(d, i, true) +
-    histLink +
-    shopLink +
-    storyLink +
+    spotlights +
     aurora +
     timeline(d);
   h +=

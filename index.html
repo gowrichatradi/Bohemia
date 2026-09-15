@@ -213,6 +213,37 @@ button.chip:active{transform:scale(.95)}
 .muted{color:var(--ink2);font-size:15px}
 .tiny{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink3)}
 
+/* ===== inline spotlights — background / shop / stories teaser cards ===== */
+/* Three side-by-side cards under the hero, one per deep-dive page. Each
+   pulls two bullets from data.day.spot; the whole card is the link. */
+.spotlights{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+@media (max-width:560px){.spotlights{grid-template-columns:1fr;gap:8px}}
+.spotcard{position:relative;display:flex;flex-direction:column;
+  background:var(--card);border:.5px solid var(--line);border-radius:12px;
+  padding:12px 14px 12px 18px;text-decoration:none;color:inherit;
+  transition:transform .12s var(--ease),border-color .18s ease;
+  box-shadow:0 8px 20px -14px rgba(0,0,0,.45)}
+.spotcard::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;
+  border-radius:2px;background:var(--sc-accent,var(--gold));transition:background .18s ease}
+.spotcard[data-kind="hist"]{--sc-accent:var(--gold)}
+.spotcard[data-kind="shop"]{--sc-accent:var(--fjord)}
+.spotcard[data-kind="story"]{--sc-accent:#B084E0}
+.spotcard:hover,.spotcard:focus-visible{transform:translateY(-1px);
+  border-color:color-mix(in srgb,var(--sc-accent) 55%,var(--line))}
+.spotcard:active{transform:translateY(0) scale(.99)}
+.spotcard .sc-lab{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--sc-accent);font-weight:600;margin-bottom:6px}
+.spotcard ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.spotcard li{color:var(--ink2);font-size:12.5px;line-height:1.5;
+  padding-left:12px;position:relative}
+.spotcard li::before{content:"·";position:absolute;left:0;top:-2px;
+  color:var(--sc-accent);font-weight:700;font-size:16px;line-height:1}
+.spotcard .sc-more{display:inline-flex;align-items:center;gap:3px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin-top:auto;padding-top:8px;transition:color .18s ease}
+.spotcard:hover .sc-more{color:var(--sc-accent)}
+
 /* ===== day list w/ legs ===== */
 .leg{margin-top:22px}
 .leg:first-child{margin-top:6px}
