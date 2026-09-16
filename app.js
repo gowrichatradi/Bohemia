@@ -1036,12 +1036,17 @@ function vDay(i) {
   // Inline spotlights — three teaser cards, each linking to its deep-dive page.
   // Each pulls two bullets from d.spot (background / shop / stories).
   const sp = d.spot || { hist: [], shop: [], story: [] };
+  const SC_ICON = {
+    hist: '<svg viewBox="0 0 24 24"><path d="M4 4h10l4 4v12H4z"/><path d="M14 4v4h4"/><path d="M8 12h6M8 15h6M8 18h4"/></svg>',
+    shop: '<svg viewBox="0 0 24 24"><path d="M4 8h16l-1.5 11a2 2 0 01-2 1.7H7.5a2 2 0 01-2-1.7L4 8z"/><path d="M8 8V6a4 4 0 018 0v2"/></svg>',
+    story: '<svg viewBox="0 0 24 24"><path d="M4 5.5c3-1.2 6-1.2 8 0 2-1.2 5-1.2 8 0V19c-3-1.2-6-1.2-8 0-2-1.2-5-1.2-8 0z"/><path d="M12 5.5V19"/></svg>',
+  };
   function spotCard(kind, label, href, bullets) {
     const items = (bullets && bullets.length)
       ? '<ul>' + bullets.map((b) => `<li>${esc(b)}</li>`).join('') + '</ul>'
       : '';
     return `<a class="spotcard" data-kind="${kind}" href="${href}">
-      <div class="sc-lab">${label}</div>
+      <div class="sc-lab">${SC_ICON[kind] || ''}<span>${label}</span></div>
       ${items}
       <div class="sc-more">Read more <span aria-hidden="true">↗</span></div>
     </a>`;
