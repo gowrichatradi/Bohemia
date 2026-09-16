@@ -419,6 +419,26 @@ button.chip:active{transform:scale(.95)}
 .daylight-warn.ok{background:rgba(79,214,156,.08);border-color:rgba(79,214,156,.24)}
 .daylight-warn.ok .dw-lab{color:var(--dawn)}
 
+/* per-day spend chip — sits on every day view, taps into Bookings → Live prefilled */
+.day-spend{display:flex;align-items:center;gap:12px;width:100%;
+  padding:11px 14px;margin:10px 0 4px;border-radius:12px;
+  background:var(--card);border:.5px solid var(--line);
+  color:inherit;cursor:pointer;text-align:left;
+  box-shadow:0 8px 20px -16px rgba(0,0,0,.5);
+  transition:transform .12s var(--ease),border-color .18s ease}
+.day-spend:hover{transform:translateY(-1px);border-color:rgba(217,164,65,.32)}
+.day-spend:active{transform:translateY(0) scale(.99)}
+.day-spend .ds-lab{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);font-weight:600;flex:0 0 auto}
+.day-spend .ds-lab svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.7}
+.day-spend .ds-val{flex:1;font-family:var(--mono);font-size:13px;color:var(--ink2);
+  font-variant-numeric:tabular-nums;text-align:right}
+.day-spend .ds-val b{color:var(--ink);font-weight:600;font-size:14px}
+.day-spend .ds-more{font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink3);flex:0 0 auto}
+.day-spend:hover .ds-more{color:var(--gold)}
+
 /* ===== day timeline ===== */
 .tl{position:relative;margin:16px 0 0;padding-left:30px}
 .tl::before{content:"";position:absolute;left:8px;top:6px;bottom:14px;width:2px;border-radius:2px;
@@ -567,6 +587,24 @@ button.chip:active{transform:scale(.95)}
   border-radius:9px;padding:11px;font-size:14px;font-weight:600;letter-spacing:.02em;
   margin-top:2px;transition:opacity .2s}
 .lv-add:active{opacity:.75}
+/* segmented sub-view on the Live tab */
+.lv-seg{display:flex;gap:0;margin:12px 0 8px;background:var(--bg2);
+  border:.5px solid var(--line);border-radius:10px;padding:3px;position:relative}
+.lv-seg button{flex:1;padding:8px 6px;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);background:transparent;
+  border:0;border-radius:8px;cursor:pointer;transition:color .18s ease,background .18s ease;font-weight:600}
+.lv-seg button.on{color:var(--ink);background:color-mix(in srgb,var(--dawn) 12%,var(--bg2))}
+.lv-seg button:not(.on):hover{color:var(--ink2)}
+/* vs-plan progress bar */
+.lv-bar{height:8px;border-radius:6px;background:rgba(255,255,255,.05);
+  overflow:hidden;margin:8px 0 6px;border:.5px solid var(--line)}
+.lv-bar-fill{height:100%;background:linear-gradient(90deg,var(--dawn),var(--fjord));
+  border-radius:6px;transition:width .5s var(--ease)}
+.lv-bar-fill.over{background:linear-gradient(90deg,var(--dusk),var(--warn))}
+.lv-bar-lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+  color:var(--ink3);margin-bottom:14px}
+.lv-over{color:var(--warn)!important}
+
 .lv-glance{background:var(--card);border:.5px solid var(--line);border-radius:16px;
   padding:14px 18px;margin-bottom:10px}
 .lv-g-row{display:flex;justify-content:space-between;align-items:baseline;

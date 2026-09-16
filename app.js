@@ -1203,10 +1203,12 @@ function vDay(i) {
   // sun info is now inline in the hero itself (includeSun=true)
   const daylightWarn = daylightWarning(d, i);
   const dmap = dayMapCard(d, i);
+  const spendChip = daySpendChip(d);
   let h =
     `<button class="back" onclick="backToDays()">${I.chev}All days</button>` +
     heroFor(d, i, true) +
     daylightWarn +
+    spendChip +
     dmap +
     spotlights +
     aurora +
@@ -1328,21 +1330,14 @@ function fmtMoney(n, ccy) {
   const abs = Math.abs(Math.round(n));
   return `<span class="bg-n">${sign}${ccy || "$"}${abs.toLocaleString("en-AU")}</span>`;
 }
-function vBudget() {
+/* Shared totals — reused by vBudget and the Live vs-plan comparison. */
+function computeBudgetTotals() {
   const B = DATA.budget || { currency: "AUD", categories: [] };
-  const ccy = "$";
-  let grand = 0,
-    unknown = 0,
-    cashback = 0,
-    pending = 0;
-
+  let grand = 0, unknown = 0, cashback = 0, pending = 0;
   const catTotals = [];
   B.categories.forEach((c) => {
-    if (c.head === "Contingency") return; // computed at the end
-    let sub = 0,
-      qs = 0,
-      cb = 0,
-      ps = 0;
+    if (c.head === "Contingency") return;
+    let sub = 0, qs = 0, cb = 0, ps = 0;
     c.rows.forEach((r) => {
       if (typeof r.cash === "number") {
         sub += r.cash;
@@ -1351,13 +1346,17 @@ function vBudget() {
       if (typeof r.pendingSaving === "number") ps += r.pendingSaving;
     });
     catTotals.push({ head: c.head, sub, qs, cb, ps });
-    grand += sub;
-    unknown += qs;
-    cashback += cb;
-    pending += ps;
+    grand += sub; unknown += qs; cashback += cb; pending += ps;
   });
   cashback = Math.round(cashback);
   const contingency = Math.round(grand * 0.1);
+  const netAfterCashback = grand - cashback - pending;
+  return { B, grand, unknown, cashback, pending, contingency, netAfterCashback, catTotals };
+}
+
+function vBudget() {
+  const { B, grand, unknown, cashback, pending, contingency, catTotals } = computeBudgetTotals();
+  const ccy = "$";
 
   // Glance card at the top: committed, cashback earning, pending savings, net.
   let h = `<div class="bg-glance">
@@ -1480,17 +1479,67 @@ function todayLocal() {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+/* Compact spend chip on the day view — shows what you've logged today,
+   quick-adds a common band, or jumps to Bookings → Live. */
+function daySpendChip(d) {
+  const iso = dayIsoFor(d);
+  if (!iso) return "";
+  const spent = liveSpendForDay(iso);
+  const items = liveRead().filter((e) => e.date === iso);
+  const chip = spent > 0
+    ? `<b>$${Math.round(spent).toLocaleString("en-AU")}</b> · ${items.length} entr${items.length === 1 ? "y" : "ies"}`
+    : `<b>$0</b> logged`;
+  return `<button class="day-spend" onclick="goLive('${iso}')">
+    <span class="ds-lab">${I.copy}Spend today</span>
+    <span class="ds-val">${chip}</span>
+    <span class="ds-more">Log →</span>
+  </button>`;
+}
+/* Jump straight to Bookings → Live and prefill the date. */
+function goLive(iso) {
+  S.view = "book";
+  S.bk = 5; // Live tab
+  S.day = null;
+  setTab("book");
+  render();
+  window.scrollTo(0, 0);
+  setTimeout(() => {
+    const dt = document.getElementById("lv-date");
+    if (dt) { dt.value = iso; document.getElementById("lv-amt").focus(); }
+  }, 60);
+}
+/* Total live spend in AUD for a specific YYYY-MM-DD (used by the day-view chip). */
+function liveSpendForDay(iso) {
+  return liveRead()
+    .filter((e) => e.date === iso)
+    .reduce((s, e) => s + e.amt * (FX[e.ccy] || 1), 0);
+}
+/* Convert a data.js day.date ("Wed 30 Sep") to ISO for the current trip year. */
+function dayIsoFor(d) {
+  const m = d.date.match(/(\d+)\s+(\w+)/);
+  if (!m) return null;
+  const mon = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 }[m[2]];
+  if (!mon) return null;
+  return `2026-${String(mon).padStart(2, "0")}-${String(+m[1]).padStart(2, "0")}`;
+}
+/* Live sub-view — kept in state so a re-render preserves what the user chose. */
+if (typeof S.lv === "undefined") S.lv = "cat";  // "cat" | "day" | "plan"
+function setLiveView(v) { S.lv = v; render(); }
+
 function vLive() {
   const list = liveRead().slice().sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
   const today = todayLocal();
-  const totals = {};
+  const catTotals = {};
+  const dayTotals = {};
   let grandAUD = 0;
   list.forEach((e) => {
     const aud = e.amt * (FX[e.ccy] || 1);
-    totals[e.cat] = (totals[e.cat] || 0) + aud;
+    catTotals[e.cat] = (catTotals[e.cat] || 0) + aud;
+    dayTotals[e.date] = (dayTotals[e.date] || 0) + aud;
     grandAUD += aud;
   });
 
+  // Quick-add form
   let h = `<div class="lv-form">
     <div class="lv-row">
       <input id="lv-amt" class="lv-in lv-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
@@ -1508,36 +1557,75 @@ function vLive() {
     <button class="lv-add" onclick="liveAdd()">Add expense</button>
   </div>`;
 
-  if (list.length) {
-    h += `<div class="lv-glance">
-      <div class="lv-g-row lv-g-net"><span>Live spend so far</span><b>$${Math.round(grandAUD).toLocaleString("en-AU")}</b></div>
-      ${Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
-        `<div class="lv-g-row"><span>${esc(k)}</span><b>$${Math.round(v).toLocaleString("en-AU")}</b></div>`
-      ).join("")}
-    </div>`;
-    h += `<div class="lv-list">` +
-      list.map((e) => {
-        const aud = Math.round(e.amt * (FX[e.ccy] || 1));
-        return `<div class="lv-item">
-          <div class="lv-item-l">
-            <div class="lv-item-top">
-              <span class="lv-item-cat">${esc(e.cat)}</span>
-              <span class="lv-item-date">${esc(e.date)}</span>
-            </div>
-            ${e.note ? `<div class="lv-item-note">${esc(e.note)}</div>` : ""}
-          </div>
-          <div class="lv-item-r">
-            <div class="lv-item-amt">${esc(e.ccy)} ${e.amt.toLocaleString("en-AU", { maximumFractionDigits: 2 })}</div>
-            <div class="lv-item-aud">$${aud.toLocaleString("en-AU")}</div>
-          </div>
-          <button class="lv-item-x" onclick="liveDelete('${e.id}')" aria-label="Delete">×</button>
-        </div>`;
-      }).join("") +
-      `</div>`;
-    h += `<div class="lv-tools"><button class="lv-tool" onclick="liveExport()">Export CSV</button></div>`;
-  } else {
+  if (!list.length) {
     h += `<div class="lv-empty">No expenses yet. Add one above and it'll show up here — saved on this device only.</div>`;
+    return h;
   }
+
+  // Sub-view segmented control (By category · By day · Vs plan)
+  const modes = [
+    ["cat", "By category"],
+    ["day", "By day"],
+    ["plan", "Vs plan"],
+  ];
+  h += `<div class="lv-seg">` +
+    modes.map(([id, label]) =>
+      `<button class="${S.lv === id ? "on" : ""}" onclick="setLiveView('${id}')">${label}</button>`
+    ).join("") +
+    `</div>`;
+
+  // Always-on total pill
+  h += `<div class="lv-glance">
+    <div class="lv-g-row lv-g-net"><span>Live spend so far</span><b>$${Math.round(grandAUD).toLocaleString("en-AU")}</b></div>`;
+
+  if (S.lv === "cat") {
+    // Category totals
+    h += Object.entries(catTotals).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+      `<div class="lv-g-row"><span>${esc(k)}</span><b>$${Math.round(v).toLocaleString("en-AU")}</b></div>`
+    ).join("");
+    h += `</div>`;
+  } else if (S.lv === "day") {
+    // Day totals — descending date
+    h += Object.entries(dayTotals).sort((a, b) => b[0].localeCompare(a[0])).map(([k, v]) =>
+      `<div class="lv-g-row"><span>${esc(k)}</span><b>$${Math.round(v).toLocaleString("en-AU")}</b></div>`
+    ).join("");
+    h += `</div>`;
+  } else {
+    // Vs plan — pull totals from DATA.budget and compare
+    const { grand: planned, netAfterCashback } = computeBudgetTotals();
+    const pct = planned ? Math.round((grandAUD / netAfterCashback) * 100) : 0;
+    const remaining = netAfterCashback - grandAUD;
+    const overBar = pct > 100;
+    h += `<div class="lv-g-row"><span>Planned (net after cashback)</span><b>$${Math.round(netAfterCashback).toLocaleString("en-AU")}</b></div>
+      <div class="lv-g-row"><span>Committed already</span><b>$${Math.round(planned).toLocaleString("en-AU")}</b></div>
+      <div class="lv-g-row"><span>${remaining >= 0 ? "Left on the plan" : "Over the plan"}</span>
+        <b class="${remaining < 0 ? "lv-over" : ""}">${remaining >= 0 ? "" : "−"}$${Math.abs(Math.round(remaining)).toLocaleString("en-AU")}</b></div>
+    </div>
+    <div class="lv-bar"><div class="lv-bar-fill ${overBar ? "over" : ""}" style="width:${Math.min(pct, 100)}%"></div></div>
+    <div class="lv-bar-lab">${pct}% of the planned budget spent live · commitments already booked are separate</div>`;
+  }
+
+  // Item list — full detail regardless of segment
+  h += `<div class="lv-list">` +
+    list.map((e) => {
+      const aud = Math.round(e.amt * (FX[e.ccy] || 1));
+      return `<div class="lv-item">
+        <div class="lv-item-l">
+          <div class="lv-item-top">
+            <span class="lv-item-cat">${esc(e.cat)}</span>
+            <span class="lv-item-date">${esc(e.date)}</span>
+          </div>
+          ${e.note ? `<div class="lv-item-note">${esc(e.note)}</div>` : ""}
+        </div>
+        <div class="lv-item-r">
+          <div class="lv-item-amt">${esc(e.ccy)} ${e.amt.toLocaleString("en-AU", { maximumFractionDigits: 2 })}</div>
+          <div class="lv-item-aud">$${aud.toLocaleString("en-AU")}</div>
+        </div>
+        <button class="lv-item-x" onclick="liveDelete('${e.id}')" aria-label="Delete">×</button>
+      </div>`;
+    }).join("") +
+    `</div>`;
+  h += `<div class="lv-tools"><button class="lv-tool" onclick="liveExport()">Export CSV</button></div>`;
   return h;
 }
 
