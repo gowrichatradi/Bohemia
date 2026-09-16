@@ -312,6 +312,72 @@ function initJourneyMap() {
   );
 }
 
+/* ---------- per-day Leaflet map ----------
+   Renders a small Leaflet map for one day using data.day.map (center + pins).
+   Lazy-init: only fires when the user taps "Show map" — otherwise Leaflet
+   never mounts and there is nothing to tear down on re-render. */
+function dayMapCard(d, idx) {
+  if (!d || !d.map) return "";
+  const id = `dmap-${idx}`;
+  return `<div class="daymap-card" id="${id}-wrap">
+    <button class="daymap-toggle" onclick="toggleDayMap(${idx})">
+      <span class="dm-lab">${I.pin}Map · ${esc(d.map.pins ? d.map.pins.length : 0)} stops today</span>
+      <span class="dm-chev" id="${id}-chev">▾</span>
+    </button>
+    <div class="daymap-body" id="${id}"></div>
+  </div>`;
+}
+function toggleDayMap(idx) {
+  const el = document.getElementById(`dmap-${idx}`);
+  const chev = document.getElementById(`dmap-${idx}-chev`);
+  if (!el) return;
+  const open = el.classList.toggle("open");
+  if (chev) chev.textContent = open ? "▴" : "▾";
+  if (open) initDayMap(idx);
+}
+function initDayMap(idx) {
+  if (!window.L) return;
+  const d = DATA.days[idx];
+  if (!d || !d.map) return;
+  const el = document.getElementById(`dmap-${idx}`);
+  if (!el || el._map) return;
+  const m = L.map(el, {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    dragging: true,
+    tap: true,
+    minZoom: 3,
+    maxZoom: 15,
+  }).setView(d.map.center, d.map.zoom || 10);
+  el._map = m;
+  L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    maxZoom: 15,
+    subdomains: "abc",
+    attribution:
+      'Map data: © <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors, SRTM · Style: © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+  }).addTo(m);
+  const legAccent = (legOf(idx) || LEGS[0]).accent;
+  const pins = d.map.pins || [];
+  // Route line connecting the pins in order (halo + ink)
+  if (pins.length >= 2) {
+    const coords = pins.map((p) => [p[0], p[1]]);
+    L.polyline(coords, { color: "#ffffff", weight: 5, opacity: 0.85, lineJoin: "round" }).addTo(m);
+    L.polyline(coords, { color: "#0B0F13", weight: 2.5, opacity: 0.95, lineJoin: "round", dashArray: "4 4" }).addTo(m);
+  }
+  pins.forEach((p, i) => {
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="tp-pin" style="--pc:${legAccent}"><span class="tp-pin-num">${i + 1}</span></div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+    L.marker([p[0], p[1]], { icon }).addTo(m).bindPopup(`<b>${p[2] || ""}</b>`);
+  });
+  if (pins.length) m.fitBounds(pins.map((p) => [p[0], p[1]]), { padding: [22, 22], maxZoom: 12 });
+  // Leaflet needs a nudge after being unhidden
+  setTimeout(() => m.invalidateSize(), 220);
+}
+
 /* ---------- phases (groups a day's parts by time of day) ---------- */
 const PHASE_ORDER = ["dawn", "day", "stops", "kid", "evening", "notes"];
 const PHASE = {
@@ -349,6 +415,78 @@ const KIND_LABEL = {
   eve: "Evening",
 };
 const KIND_ICON = { mkt: I.shop, cafe: I.cup, shop: I.shop, detour: I.pin, cheap: I.cup };
+
+/* ---------- drive-vs-sunset warning ---------- */
+/* Parse a drive band like "3h", "1h30", "4h45 + stops", "2h + 1h15" to minutes.
+   Sums every hN + Nm pair it finds; ignores prose. Returns 0 if nothing parseable. */
+function driveMinutes(txt) {
+  if (!txt) return 0;
+  let m = 0;
+  const re = /(\d+)\s*h(?:\s*(\d+))?/gi;
+  let match;
+  while ((match = re.exec(txt)) !== null) {
+    m += parseInt(match[1], 10) * 60 + (match[2] ? parseInt(match[2], 10) : 0);
+  }
+  return m;
+}
+function toMin(hhmm) {
+  if (!hhmm) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm);
+  return m ? +m[1] * 60 + +m[2] : null;
+}
+/* Return a warning card only when it's actually today AND the day has a drive AND
+   remaining daylight is thinner than the drive still needs. */
+function daylightWarning(d, idx) {
+  if (idx !== currentIndex()) return "";
+  const drive = driveMinutes(d.drive);
+  if (drive <= 0) return "";
+  const set = toMin(d.set);
+  const rise = toMin(d.rise);
+  if (set == null) return "";
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const untilSet = set - nowMin;
+  const buffer = untilSet - drive;
+  // Bail if we're already past sunset — different problem
+  if (untilSet <= 0) return "";
+  let tone, label, msg;
+  if (buffer < 0) {
+    tone = "warn";
+    label = "Behind";
+    msg = `Drive ${Math.round(drive/60*10)/10}h · sunset ${d.set} · only ${Math.round(untilSet/60*10)/10}h of daylight left. You'll finish in the dark.`;
+  } else if (buffer < 60) {
+    tone = "tight";
+    label = "Tight";
+    msg = `Drive ${Math.round(drive/60*10)/10}h · sunset ${d.set} · ${Math.round(untilSet/60*10)/10}h daylight, ${Math.round(buffer)} min buffer. Skip a stop.`;
+  } else {
+    // enough buffer — quiet, don't shout
+    tone = "ok";
+    label = "On time";
+    msg = `Drive ${Math.round(drive/60*10)/10}h · sunset ${d.set} · ${Math.round(buffer/60*10)/10}h buffer after driving. Comfortable.`;
+  }
+  return `<div class="daylight-warn ${tone}">
+    <div class="dw-lab">${I.set}${label}</div>
+    <div class="dw-msg">${esc(msg)}</div>
+  </div>`;
+}
+
+/* ---------- day-done state (long-press to toggle) ---------- */
+/* Keyed by date string so a day marked done stays done across reloads and
+   across data changes. */
+function isDayDone(d) {
+  try { return localStorage.getItem("done_" + d.date) === "1"; }
+  catch (_) { return false; }
+}
+function toggleDayDone(d) {
+  const on = !isDayDone(d);
+  try {
+    if (on) localStorage.setItem("done_" + d.date, "1");
+    else localStorage.removeItem("done_" + d.date);
+  } catch (_) {}
+  if (navigator.vibrate) navigator.vibrate(on ? [30, 40, 30] : 30);
+  toast(on ? "Marked " + d.date + " done ✓" : "Cleared " + d.date);
+  render();
+}
 
 /* ---------- state ---------- */
 const S = {
@@ -1009,19 +1147,22 @@ function vDays() {
           <div class="legband-t"><span class="nm">${esc(leg.name)}</span><span class="rg">${range}</span></div>
           <div class="legband-s">${esc(leg.sub)}</div></div>`;
     }
-    const cls = i === idx ? "now" : dayDate(d) < today() ? "past" : "";
+    const cls = [
+      i === idx ? "now" : dayDate(d) < today() ? "past" : "",
+      isDayDone(d) ? "done" : "",
+    ].filter(Boolean).join(" ");
     const dp = d.date.split(" ");
     const wx = wxFor(i);
     const wxHtml = wx
       ? `<span class="wchip ${wxTempClass(wx.hi)}">${wxIcon(wx.code)}${wx.hi}°/${wx.lo}°</span>`
       : "";
-    h += `<button class="drow ${cls} stagger" style="--i:${si++}" onclick="openDay(${i})">
+    h += `<button class="drow ${cls} stagger" style="--i:${si++}" data-day-idx="${i}">
         ${i === idx ? '<span class="pulse"></span>' : ""}
         <div class="dt">${esc(dp[0])}<b>${esc(dp[1])} ${esc(dp[2] || "")}</b></div>
         <div class="bd"><div class="ti">${esc(d.title)}</div>
           <div class="st">${esc(d.stay)}${d.drive ? " · " + esc(d.drive) : ""}${wxHtml}</div></div>
         <div class="ic">${d.transport ? I[d.transport.kind] : ""}${d.car ? I.car : ""}</div>
-        <div class="go">${I.chev}</div>
+        <div class="go">${isDayDone(d) ? '<span class="done-check">✓</span>' : I.chev}</div>
       </button>`;
     if (r === rows.length - 1) h += `</div>`; // close the final leg
   });
@@ -1060,9 +1201,13 @@ function vDay(i) {
   const isLofoten = i >= 2 && i <= 6;
   const aurora = isLofoten ? auroraCard(d) : "";
   // sun info is now inline in the hero itself (includeSun=true)
+  const daylightWarn = daylightWarning(d, i);
+  const dmap = dayMapCard(d, i);
   let h =
     `<button class="back" onclick="backToDays()">${I.chev}All days</button>` +
     heroFor(d, i, true) +
+    daylightWarn +
+    dmap +
     spotlights +
     aurora +
     timeline(d);
@@ -1900,6 +2045,50 @@ function render() {
   }
 }
 
+/* ---------- long-press to mark a day done, tap to open ---------- */
+/* Delegated to #app so it survives every re-render — .drow rows have
+   data-day-idx and we pick up the event as it bubbles. */
+(() => {
+  let pressTimer = null;
+  let pressTarget = null;
+  let longFired = false;
+  const HOLD_MS = 500;
+
+  const cancelPress = () => {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    if (pressTarget) pressTarget.classList.remove("pressing");
+    pressTarget = null;
+  };
+
+  const app = $("app");
+  app.addEventListener("pointerdown", (e) => {
+    const row = e.target.closest(".drow[data-day-idx]");
+    if (!row) return;
+    longFired = false;
+    pressTarget = row;
+    row.classList.add("pressing");
+    pressTimer = setTimeout(() => {
+      longFired = true;
+      const idx = parseInt(row.dataset.dayIdx, 10);
+      const d = DATA.days[idx];
+      if (d) toggleDayDone(d);
+      cancelPress();
+    }, HOLD_MS);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((evt) =>
+    app.addEventListener(evt, cancelPress),
+  );
+  app.addEventListener("click", (e) => {
+    const row = e.target.closest(".drow[data-day-idx]");
+    if (!row) return;
+    if (longFired) { longFired = false; e.preventDefault(); e.stopPropagation(); return; }
+    const idx = parseInt(row.dataset.dayIdx, 10);
+    if (!isNaN(idx)) openDay(idx);
+  });
+  /* also allow scrolling to cancel */
+  app.addEventListener("touchmove", cancelPress, { passive: true });
+})();
+
 document.querySelectorAll(".tab").forEach((b) => {
   b.onclick = () => {
     S.view = b.dataset.v;
@@ -1907,8 +2096,32 @@ document.querySelectorAll(".tab").forEach((b) => {
     setTab(b.dataset.v);
     render();
     window.scrollTo(0, 0);
+    if (history.replaceState) history.replaceState(null, "", "#" + b.dataset.v);
   };
 });
+
+/* Home-screen shortcut deep links — #today / #days / #book / #search */
+function applyLocationHash() {
+  const h = (location.hash || "").replace(/^#/, "");
+  if (h === "search") {
+    S.view = "days";
+    setTab("days");
+    render();
+    const s = $("srch");
+    s.style.display = "block";
+    s.focus();
+    return;
+  }
+  if (["today", "days", "book", "info"].includes(h)) {
+    S.view = h;
+    S.day = null;
+    setTab(h);
+    render();
+    window.scrollTo(0, 0);
+  }
+}
+window.addEventListener("hashchange", applyLocationHash);
+applyLocationHash();
 $("btnSearch").onclick = () => {
   const s = $("srch");
   const showing = s.style.display !== "none";

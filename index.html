@@ -299,6 +299,29 @@ button.chip:active{transform:scale(.95)}
 .leaflet-control-zoom a{background:#fff!important;color:#333!important;
   border-bottom-color:rgba(0,0,0,.1)!important}
 .leaflet-control-zoom a:hover{background:#f0f0f0!important;color:#000!important}
+/* numbered pin variant — used on per-day maps to show stop order */
+.tp-pin-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.6);line-height:1}
+.tp-pin{position:relative}
+
+/* ===== per-day map card (Leaflet, lazy-init) ===== */
+.daymap-card{background:var(--card);border:.5px solid var(--line);
+  border-radius:14px;margin:12px 0 4px;overflow:hidden;
+  box-shadow:0 10px 24px -18px rgba(0,0,0,.5)}
+.daymap-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:transparent;border:0;color:var(--ink);
+  cursor:pointer;transition:background .18s ease}
+.daymap-toggle:hover{background:rgba(255,255,255,.03)}
+.daymap-toggle .dm-lab{display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--fjord);font-weight:600}
+.daymap-toggle .dm-lab svg{width:14px;height:14px;stroke:currentColor;fill:none;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.daymap-toggle .dm-chev{color:var(--ink3);font-size:14px;line-height:1}
+.daymap-body{height:0;overflow:hidden;transition:height .28s var(--ease)}
+.daymap-body.open{height:280px;border-top:.5px solid var(--line)}
+.daymap-body .leaflet-container{background:#eef3f0;height:100%;width:100%}
 
 /* route timeline — the journey card */
 .card.route{padding:20px 18px}
@@ -367,6 +390,34 @@ button.chip:active{transform:scale(.95)}
   box-shadow:0 0 0 0 rgba(79,214,156,.5);animation:pulse 2s var(--ease) infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,214,156,.5)}70%{box-shadow:0 0 0 8px rgba(79,214,156,0)}100%{box-shadow:0 0 0 0 rgba(79,214,156,0)}}
 .drow.past{opacity:.4}
+/* long-press to mark done — dimmed with a green tick, and a subtle "pressing" scale
+   while the finger is held down. Clears on release/scroll. */
+.drow.pressing{transform:scale(.985);transition:transform .12s var(--ease);
+  background:rgba(79,214,156,.08);border-radius:12px}
+.drow.done{opacity:.42}
+.drow.done .ti{text-decoration:line-through;text-decoration-color:rgba(79,214,156,.55);
+  text-decoration-thickness:1.5px}
+.drow.done.now{opacity:1}
+.done-check{display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;background:rgba(79,214,156,.18);
+  color:var(--dawn);font-weight:700;font-size:12px;line-height:1;
+  border:.5px solid rgba(79,214,156,.4)}
+
+/* daylight-vs-drive warning — sits above the spotlights on today's day view */
+.daylight-warn{display:flex;flex-direction:column;gap:4px;
+  padding:12px 14px;margin:12px 0 4px;border-radius:12px;
+  border:.5px solid transparent;background:rgba(255,255,255,.03)}
+.daylight-warn .dw-lab{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600}
+.daylight-warn .dw-lab svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+.daylight-warn .dw-msg{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.daylight-warn.warn{background:rgba(232,115,90,.10);border-color:rgba(232,115,90,.35)}
+.daylight-warn.warn .dw-lab{color:var(--warn)}
+.daylight-warn.tight{background:rgba(232,168,96,.10);border-color:rgba(232,168,96,.32)}
+.daylight-warn.tight .dw-lab{color:var(--dusk)}
+.daylight-warn.ok{background:rgba(79,214,156,.08);border-color:rgba(79,214,156,.24)}
+.daylight-warn.ok .dw-lab{color:var(--dawn)}
 
 /* ===== day timeline ===== */
 .tl{position:relative;margin:16px 0 0;padding-left:30px}
