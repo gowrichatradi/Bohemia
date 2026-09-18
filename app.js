@@ -1630,6 +1630,61 @@ function syncDisconnect() {
   toast("Sync disconnected");
   render();
 }
+/* Generate a pairing link containing the sync config in the URL fragment
+   (hashes are client-side only, never sent to any server). AirDrop or
+   iMessage it to the other device — one tap and they're paired. */
+async function syncPairLink() {
+  const cfg = syncCfg();
+  if (!cfg) { toast("Set up sync first"); return; }
+  // Only the binId + key travel — the label is device-specific.
+  const packet = { binId: cfg.binId, key: cfg.key };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(packet))));
+  const base = location.href.replace(/#.*$/, "").replace(/\?.*$/, "");
+  const url = `${base}#pair=${encoded}`;
+  const title = "Arctic → Alpine — pair sync";
+  const text = "Tap to pair this device with our expense log.";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text, url });
+      return;
+    }
+  } catch (_) { /* user cancelled — fall through */ }
+  // Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("Pair link copied · paste in iMessage/AirDrop");
+  } catch (_) {
+    prompt("Copy this link and send it to the other phone:", url);
+  }
+}
+/* Called from applyLocationHash() when the URL contains #pair=... */
+function syncApplyPairing(encoded) {
+  let packet;
+  try {
+    packet = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+  } catch (_) { toast("Pair link is invalid"); return; }
+  if (!packet || !packet.binId || !packet.key) { toast("Pair link is invalid"); return; }
+  const cur = syncCfg();
+  if (cur && cur.binId === packet.binId && cur.key === packet.key) {
+    toast("Already paired · syncing");
+    // Jump to Live tab and sync
+    S.view = "book"; S.bk = 5; S.day = null; setTab("book");
+    render();
+    setTimeout(() => syncNow(), 250);
+    return;
+  }
+  const label = prompt("Pairing detected. Label this device (e.g. 'Wife iPhone'):", "");
+  if (label === null) { toast("Pairing cancelled"); return; }
+  const cfg = { binId: packet.binId, key: packet.key, label: (label || "").trim() || "this device" };
+  const ok = syncCfgSave(cfg);
+  if (!ok) { toast("⚠️ Could not save — storage refused"); return; }
+  // Clear the fragment so a reload doesn't re-prompt
+  if (history.replaceState) history.replaceState(null, "", location.pathname);
+  toast(`Paired as "${cfg.label}" · syncing`);
+  S.view = "book"; S.bk = 5; S.day = null; setTab("book");
+  render();
+  setTimeout(() => syncNow(), 250);
+}
 /* Auto-sync on Live tab open — throttled so bouncing tabs doesn't hammer the bin.
    Runs at most every 60 seconds; silent on failure (the manual button gives a
    toast). Requires sync configured and the browser reporting online. */
@@ -1763,7 +1818,7 @@ function vLive() {
         </div>
         <button class="lv-sync-btn" id="sync-btn" onclick="syncNow()"${online ? "" : " disabled"}>Sync now</button>
       </div>
-      <div class="lv-sync-meta">Last synced ${relativeTimeShort(meta.lastSyncAt)}${meta.count != null ? ` · ${meta.count} entries pooled` : ""} · <button class="lv-sync-link" onclick="syncDisconnect()">disconnect</button></div>
+      <div class="lv-sync-meta">Last synced ${relativeTimeShort(meta.lastSyncAt)}${meta.count != null ? ` · ${meta.count} entries pooled` : ""} · <button class="lv-sync-link" onclick="syncPairLink()">pair another device</button> · <button class="lv-sync-link" onclick="syncDisconnect()">disconnect</button></div>
     </div>`;
   } else {
     h += `<div class="lv-sync lv-sync-off">
@@ -2436,9 +2491,14 @@ document.querySelectorAll(".tab").forEach((b) => {
   };
 });
 
-/* Home-screen shortcut deep links — #today / #days / #book / #search */
+/* Home-screen shortcut deep links — #today / #days / #book / #search
+   Also handles #pair=<base64> hand-off from the primary device. */
 function applyLocationHash() {
   const h = (location.hash || "").replace(/^#/, "");
+  if (h.startsWith("pair=")) {
+    syncApplyPairing(h.slice(5));
+    return;
+  }
   if (h === "search") {
     S.view = "days";
     setTab("days");
