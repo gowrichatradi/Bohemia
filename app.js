@@ -1429,10 +1429,22 @@ const LIVE_CATS = ["Food", "Transport", "Fuel", "Groceries", "Tickets", "Shoppin
 
 function liveRead() {
   try { return JSON.parse(localStorage.getItem(LIVE_KEY) || "[]"); }
-  catch { return []; }
+  catch (e) { console.warn("liveRead failed:", e); return []; }
 }
+/* Write + read-back verification. Returns true on confirmed persistence,
+   false when the browser is refusing storage (private mode / ITP quota). */
 function liveWrite(list) {
-  try { localStorage.setItem(LIVE_KEY, JSON.stringify(list)); } catch {}
+  const payload = JSON.stringify(list);
+  try {
+    localStorage.setItem(LIVE_KEY, payload);
+    // Verify by reading back — Safari private mode SILENTLY drops writes.
+    const check = localStorage.getItem(LIVE_KEY);
+    if (check !== payload) throw new Error("write verification failed");
+    return true;
+  } catch (e) {
+    console.error("liveWrite failed:", e);
+    return false;
+  }
 }
 function liveAdd() {
   const g = (id) => document.getElementById(id);
@@ -1450,9 +1462,61 @@ function liveAdd() {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     date, amt, ccy, cat, note,
   });
-  liveWrite(list);
-  toast(`Added ${ccy} ${amt}`);
+  const ok = liveWrite(list);
+  if (ok) {
+    toast(`Added ${ccy} ${amt}`);
+  } else {
+    toast("⚠️ Not saved — storage refused (open from home-screen icon)");
+  }
   render();
+}
+/* Storage probe — returns 'ok', 'refused', or 'unavailable'. Used to render
+   a diagnostic line at the bottom of the Live tab so silent failures aren't. */
+function liveStorageProbe() {
+  try {
+    const k = "__probe_" + Date.now();
+    localStorage.setItem(k, "1");
+    const r = localStorage.getItem(k);
+    localStorage.removeItem(k);
+    return r === "1" ? "ok" : "refused";
+  } catch (_) { return "unavailable"; }
+}
+/* Import JSON — user can paste a file back in if they had to reinstall. */
+function liveImport() {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "application/json,.json";
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const arr = JSON.parse(r.result);
+        if (!Array.isArray(arr)) throw new Error("not an array");
+        const cur = liveRead();
+        const seen = new Set(cur.map((e) => e.id));
+        const merged = cur.concat(arr.filter((e) => e && e.id && !seen.has(e.id)));
+        const ok = liveWrite(merged);
+        toast(ok ? `Imported ${merged.length - cur.length} new entries` : "Import: storage refused");
+        render();
+      } catch (e) { toast("Import failed — bad JSON"); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+/* JSON export — more useful than CSV for re-import; keeps ids intact. */
+function liveExportJSON() {
+  const list = liveRead();
+  if (!list.length) return toast("Nothing to export yet");
+  const blob = new Blob([JSON.stringify(list, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bohemia-expenses-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function liveDelete(id) {
   const list = liveRead().filter((e) => e.id !== id);
@@ -1625,7 +1689,19 @@ function vLive() {
       </div>`;
     }).join("") +
     `</div>`;
-  h += `<div class="lv-tools"><button class="lv-tool" onclick="liveExport()">Export CSV</button></div>`;
+  // Storage status + backup tools
+  const probe = liveStorageProbe();
+  const statusMsg = probe === "ok"
+    ? `Storage OK · ${list.length} ${list.length === 1 ? "entry" : "entries"} saved on this device`
+    : probe === "refused"
+      ? "⚠️ Storage refused — you're probably in Safari private mode or the site was cleared by ITP. Add the app to your Home Screen to fix this."
+      : "⚠️ localStorage unavailable — nothing is being persisted this session.";
+  h += `<div class="lv-tools">
+    <button class="lv-tool" onclick="liveExport()">Export CSV</button>
+    <button class="lv-tool" onclick="liveExportJSON()">Export JSON (backup)</button>
+    <button class="lv-tool" onclick="liveImport()">Import JSON</button>
+  </div>
+  <div class="lv-status lv-status-${probe}">${statusMsg}</div>`;
   return h;
 }
 

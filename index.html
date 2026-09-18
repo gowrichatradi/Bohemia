@@ -629,10 +629,18 @@ button.chip:active{transform:scale(.95)}
   border-radius:50%;background:transparent;color:var(--ink3);font-size:18px;line-height:20px;
   padding:0;opacity:.55}
 .lv-item-x:active{opacity:1;color:var(--warn)}
-.lv-tools{display:flex;justify-content:flex-end;margin-bottom:16px}
+.lv-tools{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin-bottom:8px}
 .lv-tool{background:var(--card2);border:.5px solid var(--line);border-radius:9px;
   padding:7px 12px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--ink3)}
+  text-transform:uppercase;color:var(--ink3);cursor:pointer}
+.lv-tool:hover{color:var(--ink2)}
+/* storage status — surfaces silent write-failures + confirms persistence */
+.lv-status{margin-bottom:14px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;
+  padding:8px 12px;border-radius:8px;line-height:1.5}
+.lv-status-ok{color:var(--dawn);background:rgba(79,214,156,.08);
+  border:.5px solid rgba(79,214,156,.24)}
+.lv-status-refused,.lv-status-unavailable{color:var(--warn);
+  background:rgba(232,115,90,.10);border:.5px solid rgba(232,115,90,.35)}
 .lv-empty{background:var(--card);border:.5px dashed var(--line);border-radius:14px;
   padding:22px;text-align:center;font-size:13px;color:var(--ink3);line-height:1.5}
 
