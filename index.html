@@ -587,6 +587,38 @@ button.chip:active{transform:scale(.95)}
   border-radius:9px;padding:11px;font-size:14px;font-weight:600;letter-spacing:.02em;
   margin-top:2px;transition:opacity .2s}
 .lv-add:active{opacity:.75}
+/* Sync-with-partner card on the Live tab (JSONBin.io shared blob) */
+.lv-sync{padding:12px 14px 10px;margin:6px 0 12px;border-radius:12px;
+  background:var(--card2);border:.5px solid var(--line)}
+.lv-sync-on{background:linear-gradient(160deg,rgba(79,214,156,.09),rgba(11,15,19,0));
+  border-color:rgba(79,214,156,.28)}
+.lv-sync-off{background:linear-gradient(160deg,rgba(107,182,206,.09),rgba(11,15,19,0));
+  border-color:rgba(107,182,206,.28)}
+.lv-sync-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lv-sync-lab{display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink2);font-weight:600}
+.lv-sync-lab b{color:var(--ink);font-weight:600;text-transform:none;letter-spacing:0;font-size:12px}
+.lv-sync-dot{width:8px;height:8px;border-radius:50%;background:var(--ink3);
+  box-shadow:0 0 0 3px transparent}
+.lv-sync-dot.on{background:var(--dawn);box-shadow:0 0 0 3px rgba(79,214,156,.22);
+  animation:sync-pulse 2.2s var(--ease) infinite}
+.lv-sync-dot.off{background:var(--warn)}
+@keyframes sync-pulse{50%{box-shadow:0 0 0 6px rgba(79,214,156,.10)}}
+.lv-sync-btn{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;background:var(--dawn);color:#0B0F13;
+  border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;
+  transition:opacity .18s ease,transform .12s ease}
+.lv-sync-btn:hover{opacity:.9}
+.lv-sync-btn:active{transform:scale(.96)}
+.lv-sync-btn:disabled{opacity:.45;cursor:not-allowed}
+.lv-sync-off .lv-sync-btn{background:var(--fjord)}
+.lv-sync-meta{font-family:var(--mono);font-size:10px;letter-spacing:.03em;
+  color:var(--ink3);margin-top:8px;line-height:1.5}
+.lv-sync-link{background:none;border:0;color:var(--fjord);cursor:pointer;
+  font-family:inherit;font-size:inherit;padding:0;text-decoration:underline}
+.lv-sync-link:hover{color:var(--ink)}
+
 /* segmented sub-view on the Live tab */
 .lv-seg{display:flex;gap:0;margin:12px 0 8px;background:var(--bg2);
   border:.5px solid var(--line);border-radius:10px;padding:3px;position:relative}

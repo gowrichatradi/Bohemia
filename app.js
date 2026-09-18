@@ -1312,6 +1312,8 @@ function vBook() {
     h += vBudget();
   } else if (TABS[bk].live) {
     h += vLive();
+    // Auto-sync on Live tab open — throttled to once per minute per visit
+    maybeAutoSync();
   } else {
     h += `<p class="intro">Tap a reference to copy it.</p>`;
     TABS[bk].groups.forEach((g) => {
@@ -1506,6 +1508,149 @@ function liveImport() {
   };
   inp.click();
 }
+/* ---------- Sync via JSONBin.io (shared blob for two devices) ----------
+   Deletes are handled via a tombstone list so a device that removed an entry
+   doesn't have it re-injected by the other device on the next sync. */
+const SYNC_CFG_KEY = "bohemia-sync-cfg-v1";
+const SYNC_TOMB_KEY = "bohemia-tomb-v1";
+const SYNC_META_KEY = "bohemia-sync-meta-v1";
+const SYNC_URL = (binId) => `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`;
+
+function syncCfg() {
+  try { return JSON.parse(localStorage.getItem(SYNC_CFG_KEY) || "null"); }
+  catch { return null; }
+}
+function syncCfgSave(cfg) {
+  try { localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(cfg)); return true; }
+  catch { return false; }
+}
+function syncCfgClear() {
+  try { localStorage.removeItem(SYNC_CFG_KEY); } catch {}
+}
+function tombRead() {
+  try { return JSON.parse(localStorage.getItem(SYNC_TOMB_KEY) || "[]"); }
+  catch { return []; }
+}
+function tombWrite(arr) {
+  try { localStorage.setItem(SYNC_TOMB_KEY, JSON.stringify(arr)); } catch {}
+}
+function tombAdd(id) {
+  const t = tombRead();
+  if (!t.includes(id)) { t.push(id); tombWrite(t); }
+}
+function syncMeta() {
+  try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}"); }
+  catch { return {}; }
+}
+function syncMetaSave(m) {
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(m)); } catch {}
+}
+
+async function syncNow() {
+  const cfg = syncCfg();
+  if (!cfg || !cfg.binId || !cfg.key) {
+    toast("Set up sync first");
+    return;
+  }
+  const btn = document.getElementById("sync-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Syncing…"; }
+  try {
+    // 1. Fetch remote
+    const r = await fetch(SYNC_URL(cfg.binId) + "/latest", {
+      headers: { "X-Master-Key": cfg.key },
+    });
+    if (!r.ok) throw new Error("Fetch failed: HTTP " + r.status);
+    const remote = await r.json();
+    const remoteRec = (remote && remote.record) || {};
+    const remoteExpenses = Array.isArray(remoteRec.expenses) ? remoteRec.expenses : [];
+    const remoteTombs = Array.isArray(remoteRec.tombstones) ? remoteRec.tombstones : [];
+
+    // 2. Local state
+    const localExpenses = liveRead();
+    const localTombs = tombRead();
+
+    // 3. Merge tombstones (union), then filter both sides
+    const mergedTombs = Array.from(new Set([...localTombs, ...remoteTombs]));
+    const tombSet = new Set(mergedTombs);
+
+    // 4. Merge expenses by id — local wins on duplicate (edits stay local until synced)
+    const byId = new Map();
+    for (const e of remoteExpenses) if (!tombSet.has(e.id)) byId.set(e.id, e);
+    for (const e of localExpenses) if (!tombSet.has(e.id)) byId.set(e.id, e);
+    const merged = Array.from(byId.values()).sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
+
+    // 5. Write merged locally
+    liveWrite(merged);
+    tombWrite(mergedTombs);
+
+    // 6. Push merged upstream (single PUT — small payload, atomic)
+    const payload = {
+      expenses: merged,
+      tombstones: mergedTombs,
+      updatedAt: Date.now(),
+      device: (cfg.label || "unknown"),
+    };
+    const p = await fetch(SYNC_URL(cfg.binId), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": cfg.key },
+      body: JSON.stringify(payload),
+    });
+    if (!p.ok) throw new Error("Push failed: HTTP " + p.status);
+
+    syncMetaSave({ lastSyncAt: Date.now(), count: merged.length });
+    toast(`Synced · ${merged.length} entries`);
+    render();
+  } catch (e) {
+    console.error("sync failed:", e);
+    toast("⚠️ Sync failed: " + (e.message || "network"));
+    if (btn) { btn.disabled = false; btn.textContent = "Sync now"; }
+  }
+}
+
+function syncSetup() {
+  const cur = syncCfg() || {};
+  const binId = prompt("JSONBin.io bin ID (from your bin's URL):", cur.binId || "");
+  if (binId === null) return;
+  const key = prompt("JSONBin.io Master Key (from your account):", cur.key || "");
+  if (key === null) return;
+  const label = prompt("Label for this device (e.g. 'Gowri iPhone'):", cur.label || "");
+  if (label === null) return;
+  const trimmed = { binId: binId.trim(), key: key.trim(), label: (label || "").trim() };
+  if (!trimmed.binId || !trimmed.key) {
+    toast("Sync setup cancelled — bin ID + key required");
+    return;
+  }
+  const ok = syncCfgSave(trimmed);
+  toast(ok ? "Sync configured · run Sync now" : "Could not save sync config");
+  render();
+}
+function syncDisconnect() {
+  if (!confirm("Disconnect sync? Local expenses stay put.")) return;
+  syncCfgClear();
+  toast("Sync disconnected");
+  render();
+}
+/* Auto-sync on Live tab open — throttled so bouncing tabs doesn't hammer the bin.
+   Runs at most every 60 seconds; silent on failure (the manual button gives a
+   toast). Requires sync configured and the browser reporting online. */
+let _lastAutoSync = 0;
+function maybeAutoSync() {
+  const cfg = syncCfg();
+  if (!cfg || !navigator.onLine) return;
+  const now = Date.now();
+  if (now - _lastAutoSync < 60_000) return;
+  _lastAutoSync = now;
+  setTimeout(() => { syncNow().catch(() => {}); }, 300);
+}
+function relativeTimeShort(ts) {
+  if (!ts) return "never";
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  return Math.floor(s / 86400) + "d ago";
+}
+
 /* JSON export — more useful than CSV for re-import; keeps ids intact. */
 function liveExportJSON() {
   const list = liveRead();
@@ -1521,6 +1666,7 @@ function liveExportJSON() {
 function liveDelete(id) {
   const list = liveRead().filter((e) => e.id !== id);
   liveWrite(list);
+  tombAdd(id); // remember the delete so sync doesn't re-inject from the other device
   render();
 }
 function liveExport() {
@@ -1603,8 +1749,34 @@ function vLive() {
     grandAUD += aud;
   });
 
+  // Sync card — always shown at the top so setup / status is one tap away
+  const cfg = syncCfg();
+  const meta = syncMeta();
+  const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+  let h = "";
+  if (cfg) {
+    h += `<div class="lv-sync lv-sync-on">
+      <div class="lv-sync-row">
+        <div class="lv-sync-lab">
+          <span class="lv-sync-dot ${online ? "on" : "off"}"></span>
+          Sync · <b>${esc(cfg.label || "this device")}</b>
+        </div>
+        <button class="lv-sync-btn" id="sync-btn" onclick="syncNow()"${online ? "" : " disabled"}>Sync now</button>
+      </div>
+      <div class="lv-sync-meta">Last synced ${relativeTimeShort(meta.lastSyncAt)}${meta.count != null ? ` · ${meta.count} entries pooled` : ""} · <button class="lv-sync-link" onclick="syncDisconnect()">disconnect</button></div>
+    </div>`;
+  } else {
+    h += `<div class="lv-sync lv-sync-off">
+      <div class="lv-sync-row">
+        <div class="lv-sync-lab">Sync with another device</div>
+        <button class="lv-sync-btn" onclick="syncSetup()">Set up</button>
+      </div>
+      <div class="lv-sync-meta">Two-tap merge via a private JSONBin.io blob. Free tier, works offline (queues until online).</div>
+    </div>`;
+  }
+
   // Quick-add form
-  let h = `<div class="lv-form">
+  h += `<div class="lv-form">
     <div class="lv-row">
       <input id="lv-amt" class="lv-in lv-amt" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
       <select id="lv-ccy" class="lv-in lv-ccy">
