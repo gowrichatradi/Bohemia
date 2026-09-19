@@ -1355,8 +1355,7 @@ function vBook() {
     h += vBudget();
   } else if (TABS[bk].live) {
     h += vLive();
-    // Auto-sync on Live tab open — throttled to once per minute per visit
-    maybeAutoSync();
+    fbInit();
   } else {
     const isTodo = TABS[bk].name === "To do";
     if (isTodo) {
@@ -1476,284 +1475,122 @@ function vBudget() {
 /* ---------- live expense log (device-local) ---------- */
 // Rates match the Budget view — NOK/EUR from data.js note, DKK/CZK added.
 const FX = { AUD: 1, NOK: 0.139, EUR: 1.654, DKK: 0.222, CZK: 0.067, SGD: 1.14, USD: 1.55 };
-const LIVE_KEY = "bohemia-live-spend-v1";
 const LIVE_CATS = ["Food", "Transport", "Fuel", "Groceries", "Tickets", "Shopping", "Misc"];
 
-function liveRead() {
-  try { return JSON.parse(localStorage.getItem(LIVE_KEY) || "[]"); }
-  catch (e) { console.warn("liveRead failed:", e); return []; }
-}
-/* Write + read-back verification. Returns true on confirmed persistence,
-   false when the browser is refusing storage (private mode / ITP quota). */
-function liveWrite(list) {
-  const payload = JSON.stringify(list);
+/* ---------- Firebase Firestore backend for live-spend ----------
+   Real-time sync across devices, offline queue via IndexedDB persistence.
+   Auth is Google Sign-In with an email allowlist in the Firestore rules. */
+let _fbApp = null, _fbDb = null, _fbAuth = null;
+let _fbUser = null;           // firebase.User when signed in
+let _fbUnsub = null;          // onSnapshot unsubscribe
+let _fbCache = [];            // in-memory mirror of the expenses collection
+let _fbState = "boot";        // 'boot' | 'signed-out' | 'signed-in' | 'error'
+let _fbError = null;
+
+function fbInit() {
+  if (_fbApp || typeof firebase === "undefined") return;
   try {
-    localStorage.setItem(LIVE_KEY, payload);
-    // Verify by reading back — Safari private mode SILENTLY drops writes.
-    const check = localStorage.getItem(LIVE_KEY);
-    if (check !== payload) throw new Error("write verification failed");
-    return true;
+    _fbApp = firebase.initializeApp(firebaseConfig);
+    _fbAuth = firebase.auth();
+    _fbDb = firebase.firestore();
+    // Offline-first cache in IndexedDB — Safari PWA-safe.
+    _fbDb.enablePersistence({ synchronizeTabs: true }).catch((e) => {
+      console.warn("Firestore persistence unavailable:", e && e.code);
+    });
+    _fbAuth.onAuthStateChanged((user) => {
+      _fbUser = user || null;
+      _fbState = user ? "signed-in" : "signed-out";
+      if (_fbUnsub) { _fbUnsub(); _fbUnsub = null; }
+      if (user) fbSubscribe();
+      else _fbCache = [];
+      render();
+    });
+    // If we came back via signInWithRedirect (Safari fallback), pick up here
+    _fbAuth.getRedirectResult().catch((e) => {
+      if (e && e.code) toast("Sign-in: " + e.code);
+    });
   } catch (e) {
-    console.error("liveWrite failed:", e);
-    return false;
+    console.error("Firebase init failed:", e);
+    _fbState = "error";
+    _fbError = e && e.message;
   }
 }
-function liveAdd() {
+function fbSubscribe() {
+  if (!_fbDb || !_fbUser) return;
+  _fbUnsub = _fbDb.collection("expenses")
+    .orderBy("date", "desc")
+    .onSnapshot(
+      (snap) => {
+        _fbCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        render();
+      },
+      (err) => {
+        console.error("Firestore subscribe failed:", err);
+        toast("Sync error: " + (err.code || err.message));
+      },
+    );
+}
+async function fbSignIn() {
+  if (!_fbAuth) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  try {
+    await _fbAuth.signInWithPopup(provider);
+  } catch (e) {
+    // iOS Safari PWA blocks popups — fall back to redirect
+    if (e && (e.code === "auth/popup-blocked" || e.code === "auth/popup-closed-by-user" || e.code === "auth/operation-not-supported-in-this-environment")) {
+      try { await _fbAuth.signInWithRedirect(provider); }
+      catch (e2) { toast("Sign-in failed: " + (e2.code || e2.message)); }
+    } else {
+      toast("Sign-in failed: " + (e.code || e.message));
+    }
+  }
+}
+async function fbSignOut() {
+  if (!_fbAuth) return;
+  try {
+    if (_fbUnsub) { _fbUnsub(); _fbUnsub = null; }
+    await _fbAuth.signOut();
+  } catch (e) { toast("Sign-out: " + e.message); }
+}
+
+/* live-* API — thin wrappers on Firestore so the rest of the app keeps working */
+function liveRead() { return _fbCache.slice(); }
+async function liveAdd() {
+  if (!_fbUser || !_fbDb) { toast("Sign in first"); return; }
   const g = (id) => document.getElementById(id);
   const amt = parseFloat(g("lv-amt").value);
   const ccy = g("lv-ccy").value;
   const cat = g("lv-cat").value;
   const note = g("lv-note").value.trim();
   const date = g("lv-date").value || todayLocal();
-  if (!amt || amt <= 0) {
-    g("lv-amt").focus();
-    return;
-  }
-  const list = liveRead();
-  list.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date, amt, ccy, cat, note,
-  });
-  const ok = liveWrite(list);
-  if (ok) {
+  if (!amt || amt <= 0) { g("lv-amt").focus(); return; }
+  try {
+    await _fbDb.collection("expenses").add({
+      amt, ccy, cat, note, date,
+      createdBy: _fbUser.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
     toast(`Added ${ccy} ${amt}`);
-  } else {
-    toast("⚠️ Not saved — storage refused (open from home-screen icon)");
-  }
-  render();
-}
-/* Storage probe — returns 'ok', 'refused', or 'unavailable'. Used to render
-   a diagnostic line at the bottom of the Live tab so silent failures aren't. */
-function liveStorageProbe() {
-  try {
-    const k = "__probe_" + Date.now();
-    localStorage.setItem(k, "1");
-    const r = localStorage.getItem(k);
-    localStorage.removeItem(k);
-    return r === "1" ? "ok" : "refused";
-  } catch (_) { return "unavailable"; }
-}
-/* Import JSON — user can paste a file back in if they had to reinstall. */
-function liveImport() {
-  const inp = document.createElement("input");
-  inp.type = "file";
-  inp.accept = "application/json,.json";
-  inp.onchange = () => {
-    const f = inp.files && inp.files[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const arr = JSON.parse(r.result);
-        if (!Array.isArray(arr)) throw new Error("not an array");
-        const cur = liveRead();
-        const seen = new Set(cur.map((e) => e.id));
-        const merged = cur.concat(arr.filter((e) => e && e.id && !seen.has(e.id)));
-        const ok = liveWrite(merged);
-        toast(ok ? `Imported ${merged.length - cur.length} new entries` : "Import: storage refused");
-        render();
-      } catch (e) { toast("Import failed — bad JSON"); }
-    };
-    r.readAsText(f);
-  };
-  inp.click();
-}
-/* ---------- Sync via JSONBin.io (shared blob for two devices) ----------
-   Deletes are handled via a tombstone list so a device that removed an entry
-   doesn't have it re-injected by the other device on the next sync. */
-const SYNC_CFG_KEY = "bohemia-sync-cfg-v1";
-const SYNC_TOMB_KEY = "bohemia-tomb-v1";
-const SYNC_META_KEY = "bohemia-sync-meta-v1";
-const SYNC_URL = (binId) => `https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`;
-
-function syncCfg() {
-  try { return JSON.parse(localStorage.getItem(SYNC_CFG_KEY) || "null"); }
-  catch { return null; }
-}
-function syncCfgSave(cfg) {
-  try { localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(cfg)); return true; }
-  catch { return false; }
-}
-function syncCfgClear() {
-  try { localStorage.removeItem(SYNC_CFG_KEY); } catch {}
-}
-function tombRead() {
-  try { return JSON.parse(localStorage.getItem(SYNC_TOMB_KEY) || "[]"); }
-  catch { return []; }
-}
-function tombWrite(arr) {
-  try { localStorage.setItem(SYNC_TOMB_KEY, JSON.stringify(arr)); } catch {}
-}
-function tombAdd(id) {
-  const t = tombRead();
-  if (!t.includes(id)) { t.push(id); tombWrite(t); }
-}
-function syncMeta() {
-  try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}"); }
-  catch { return {}; }
-}
-function syncMetaSave(m) {
-  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(m)); } catch {}
-}
-
-async function syncNow() {
-  const cfg = syncCfg();
-  if (!cfg || !cfg.binId || !cfg.key) {
-    toast("Set up sync first");
-    return;
-  }
-  const btn = document.getElementById("sync-btn");
-  if (btn) { btn.disabled = true; btn.textContent = "Syncing…"; }
-  try {
-    // 1. Fetch remote
-    const r = await fetch(SYNC_URL(cfg.binId) + "/latest", {
-      headers: { "X-Master-Key": cfg.key },
-    });
-    if (!r.ok) throw new Error("Fetch failed: HTTP " + r.status);
-    const remote = await r.json();
-    const remoteRec = (remote && remote.record) || {};
-    const remoteExpenses = Array.isArray(remoteRec.expenses) ? remoteRec.expenses : [];
-    const remoteTombs = Array.isArray(remoteRec.tombstones) ? remoteRec.tombstones : [];
-
-    // 2. Local state
-    const localExpenses = liveRead();
-    const localTombs = tombRead();
-
-    // 3. Merge tombstones (union), then filter both sides
-    const mergedTombs = Array.from(new Set([...localTombs, ...remoteTombs]));
-    const tombSet = new Set(mergedTombs);
-
-    // 4. Merge expenses by id — local wins on duplicate (edits stay local until synced)
-    const byId = new Map();
-    for (const e of remoteExpenses) if (!tombSet.has(e.id)) byId.set(e.id, e);
-    for (const e of localExpenses) if (!tombSet.has(e.id)) byId.set(e.id, e);
-    const merged = Array.from(byId.values()).sort((a, b) => (a.date + a.id).localeCompare(b.date + b.id));
-
-    // 5. Write merged locally
-    liveWrite(merged);
-    tombWrite(mergedTombs);
-
-    // 6. Push merged upstream (single PUT — small payload, atomic)
-    const payload = {
-      expenses: merged,
-      tombstones: mergedTombs,
-      updatedAt: Date.now(),
-      device: (cfg.label || "unknown"),
-    };
-    const p = await fetch(SYNC_URL(cfg.binId), {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "X-Master-Key": cfg.key },
-      body: JSON.stringify(payload),
-    });
-    if (!p.ok) throw new Error("Push failed: HTTP " + p.status);
-
-    syncMetaSave({ lastSyncAt: Date.now(), count: merged.length });
-    toast(`Synced · ${merged.length} entries`);
-    render();
+    // Clear the form for the next one
+    g("lv-amt").value = "";
+    g("lv-note").value = "";
   } catch (e) {
-    console.error("sync failed:", e);
-    toast("⚠️ Sync failed: " + (e.message || "network"));
-    if (btn) { btn.disabled = false; btn.textContent = "Sync now"; }
+    console.error("Add failed:", e);
+    toast("Add failed: " + (e.code || e.message));
   }
 }
-
-function syncSetup() {
-  const cur = syncCfg() || {};
-  const binId = prompt("JSONBin.io bin ID (from your bin's URL):", cur.binId || "");
-  if (binId === null) return;
-  const key = prompt("JSONBin.io Master Key (from your account):", cur.key || "");
-  if (key === null) return;
-  const label = prompt("Label for this device (e.g. 'Gowri iPhone'):", cur.label || "");
-  if (label === null) return;
-  const trimmed = { binId: binId.trim(), key: key.trim(), label: (label || "").trim() };
-  if (!trimmed.binId || !trimmed.key) {
-    toast("Sync setup cancelled — bin ID + key required");
-    return;
-  }
-  const ok = syncCfgSave(trimmed);
-  toast(ok ? "Sync configured · run Sync now" : "Could not save sync config");
-  render();
+async function liveDelete(id) {
+  if (!_fbUser || !_fbDb) return;
+  try { await _fbDb.collection("expenses").doc(id).delete(); }
+  catch (e) { toast("Delete failed: " + (e.code || e.message)); }
 }
-function syncDisconnect() {
-  if (!confirm("Disconnect sync? Local expenses stay put.")) return;
-  syncCfgClear();
-  toast("Sync disconnected");
-  render();
-}
-/* Generate a pairing link containing the sync config in the URL fragment
-   (hashes are client-side only, never sent to any server). AirDrop or
-   iMessage it to the other device — one tap and they're paired. */
-async function syncPairLink() {
-  const cfg = syncCfg();
-  if (!cfg) { toast("Set up sync first"); return; }
-  // Only the binId + key travel — the label is device-specific.
-  const packet = { binId: cfg.binId, key: cfg.key };
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(packet))));
-  const base = location.href.replace(/#.*$/, "").replace(/\?.*$/, "");
-  const url = `${base}#pair=${encoded}`;
-  const title = "Arctic → Alpine — pair sync";
-  const text = "Tap to pair this device with our expense log.";
-  try {
-    if (navigator.share) {
-      await navigator.share({ title, text, url });
-      return;
-    }
-  } catch (_) { /* user cancelled — fall through */ }
-  // Fallback: copy to clipboard
-  try {
-    await navigator.clipboard.writeText(url);
-    toast("Pair link copied · paste in iMessage/AirDrop");
-  } catch (_) {
-    prompt("Copy this link and send it to the other phone:", url);
-  }
-}
-/* Called from applyLocationHash() when the URL contains #pair=... */
-function syncApplyPairing(encoded) {
-  let packet;
-  try {
-    packet = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-  } catch (_) { toast("Pair link is invalid"); return; }
-  if (!packet || !packet.binId || !packet.key) { toast("Pair link is invalid"); return; }
-  const cur = syncCfg();
-  if (cur && cur.binId === packet.binId && cur.key === packet.key) {
-    toast("Already paired · syncing");
-    // Jump to Live tab and sync
-    S.view = "book"; S.bk = 5; S.day = null; setTab("book");
-    render();
-    setTimeout(() => syncNow(), 250);
-    return;
-  }
-  const label = prompt("Pairing detected. Label this device (e.g. 'Wife iPhone'):", "");
-  if (label === null) { toast("Pairing cancelled"); return; }
-  const cfg = { binId: packet.binId, key: packet.key, label: (label || "").trim() || "this device" };
-  const ok = syncCfgSave(cfg);
-  if (!ok) { toast("⚠️ Could not save — storage refused"); return; }
-  // Clear the fragment so a reload doesn't re-prompt
-  if (history.replaceState) history.replaceState(null, "", location.pathname);
-  toast(`Paired as "${cfg.label}" · syncing`);
-  S.view = "book"; S.bk = 5; S.day = null; setTab("book");
-  render();
-  setTimeout(() => syncNow(), 250);
-}
-/* Auto-sync on Live tab open — throttled so bouncing tabs doesn't hammer the bin.
-   Runs at most every 60 seconds; silent on failure (the manual button gives a
-   toast). Requires sync configured and the browser reporting online. */
-let _lastAutoSync = 0;
-function maybeAutoSync() {
-  const cfg = syncCfg();
-  if (!cfg || !navigator.onLine) return;
-  const now = Date.now();
-  if (now - _lastAutoSync < 60_000) return;
-  _lastAutoSync = now;
-  setTimeout(() => { syncNow().catch(() => {}); }, 300);
-}
-function relativeTimeShort(ts) {
-  if (!ts) return "never";
-  const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return Math.floor(s / 60) + "m ago";
-  if (s < 86400) return Math.floor(s / 3600) + "h ago";
-  return Math.floor(s / 86400) + "d ago";
+/* Storage probe repurposed for Firestore state */
+function liveStorageProbe() {
+  if (_fbState === "signed-in") return "ok";
+  if (_fbState === "signed-out") return "signed-out";
+  if (_fbState === "error") return "error";
+  return "boot";
 }
 
 /* JSON export — more useful than CSV for re-import; keeps ids intact. */
@@ -1767,12 +1604,6 @@ function liveExportJSON() {
   a.download = `bohemia-expenses-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function liveDelete(id) {
-  const list = liveRead().filter((e) => e.id !== id);
-  liveWrite(list);
-  tombAdd(id); // remember the delete so sync doesn't re-inject from the other device
-  render();
 }
 function liveExport() {
   const list = liveRead();
@@ -1854,29 +1685,42 @@ function vLive() {
     grandAUD += aud;
   });
 
-  // Sync card — always shown at the top so setup / status is one tap away
-  const cfg = syncCfg();
-  const meta = syncMeta();
+  // Auth card — always at the top. Sign in with Google to sync in real time.
   const online = typeof navigator !== "undefined" ? navigator.onLine : true;
   let h = "";
-  if (cfg) {
+  if (_fbState === "boot") {
+    h += `<div class="lv-sync lv-sync-off">
+      <div class="lv-sync-row">
+        <div class="lv-sync-lab">Loading sync…</div>
+      </div>
+    </div>`;
+  } else if (_fbState === "signed-in") {
     h += `<div class="lv-sync lv-sync-on">
       <div class="lv-sync-row">
         <div class="lv-sync-lab">
           <span class="lv-sync-dot ${online ? "on" : "off"}"></span>
-          Sync · <b>${esc(cfg.label || "this device")}</b>
+          Live sync · <b>${esc(_fbUser.email)}</b>
         </div>
-        <button class="lv-sync-btn" id="sync-btn" onclick="syncNow()"${online ? "" : " disabled"}>Sync now</button>
+        <button class="lv-sync-btn" onclick="fbSignOut()">Sign out</button>
       </div>
-      <div class="lv-sync-meta">Last synced ${relativeTimeShort(meta.lastSyncAt)}${meta.count != null ? ` · ${meta.count} entries pooled` : ""} · <button class="lv-sync-link" onclick="syncPairLink()">pair another device</button> · <button class="lv-sync-link" onclick="syncDisconnect()">disconnect</button></div>
+      <div class="lv-sync-meta">Real-time between all signed-in devices · offline queue is automatic</div>
+    </div>`;
+  } else if (_fbState === "error") {
+    h += `<div class="lv-sync lv-sync-off" style="border-color:rgba(232,115,90,.35);background:rgba(232,115,90,.08)">
+      <div class="lv-sync-row">
+        <div class="lv-sync-lab">Sync unavailable</div>
+        <button class="lv-sync-btn" onclick="location.reload()">Reload</button>
+      </div>
+      <div class="lv-sync-meta">${esc(_fbError || "Firebase failed to initialize")}</div>
     </div>`;
   } else {
+    // signed-out
     h += `<div class="lv-sync lv-sync-off">
       <div class="lv-sync-row">
-        <div class="lv-sync-lab">Sync with another device</div>
-        <button class="lv-sync-btn" onclick="syncSetup()">Set up</button>
+        <div class="lv-sync-lab">Sign in to sync</div>
+        <button class="lv-sync-btn" onclick="fbSignIn()">Sign in with Google</button>
       </div>
-      <div class="lv-sync-meta">Two-tap merge via a private JSONBin.io blob. Free tier, works offline (queues until online).</div>
+      <div class="lv-sync-meta">Real-time expense sync across every phone that signs in with an allowed Google account.</div>
     </div>`;
   }
 
@@ -1899,7 +1743,11 @@ function vLive() {
   </div>`;
 
   if (!list.length) {
-    h += `<div class="lv-empty">No expenses yet. Add one above and it'll show up here — saved on this device only.</div>`;
+    if (_fbState === "signed-in") {
+      h += `<div class="lv-empty">No expenses yet. Add one above — it'll sync to every signed-in device.</div>`;
+    } else if (_fbState === "signed-out") {
+      h += `<div class="lv-empty">Sign in above to load the shared expense log.</div>`;
+    }
     return h;
   }
 
@@ -1966,19 +1814,20 @@ function vLive() {
       </div>`;
     }).join("") +
     `</div>`;
-  // Storage status + backup tools
+  // Backup tools — Firestore handles persistence, but a JSON snapshot is nice
   const probe = liveStorageProbe();
   const statusMsg = probe === "ok"
-    ? `Storage OK · ${list.length} ${list.length === 1 ? "entry" : "entries"} saved on this device`
-    : probe === "refused"
-      ? "⚠️ Storage refused — you're probably in Safari private mode or the site was cleared by ITP. Add the app to your Home Screen to fix this."
-      : "⚠️ localStorage unavailable — nothing is being persisted this session.";
+    ? `Synced with Firestore · ${list.length} ${list.length === 1 ? "entry" : "entries"} in the shared log`
+    : probe === "signed-out"
+      ? "Sign in to load and sync the shared expense log"
+      : probe === "error"
+        ? `⚠️ Firestore unavailable: ${esc(_fbError || "unknown")}`
+        : "Loading…";
   h += `<div class="lv-tools">
     <button class="lv-tool" onclick="liveExport()">Export CSV</button>
     <button class="lv-tool" onclick="liveExportJSON()">Export JSON (backup)</button>
-    <button class="lv-tool" onclick="liveImport()">Import JSON</button>
   </div>
-  <div class="lv-status lv-status-${probe}">${statusMsg}</div>`;
+  <div class="lv-status lv-status-${probe === "ok" ? "ok" : probe === "error" ? "refused" : "boot"}">${statusMsg}</div>`;
   return h;
 }
 
@@ -2572,14 +2421,9 @@ document.querySelectorAll(".tab").forEach((b) => {
   };
 });
 
-/* Home-screen shortcut deep links — #today / #days / #book / #search
-   Also handles #pair=<base64> hand-off from the primary device. */
+/* Home-screen shortcut deep links — #today / #days / #book / #search */
 function applyLocationHash() {
   const h = (location.hash || "").replace(/^#/, "");
-  if (h.startsWith("pair=")) {
-    syncApplyPairing(h.slice(5));
-    return;
-  }
   if (h === "search") {
     S.view = "days";
     setTab("days");

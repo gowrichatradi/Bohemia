@@ -19,6 +19,22 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+<!-- Firebase compat SDK — live-spend sync + Google auth. Public config; real
+     security is in the Firestore rules server-side (email allowlist). -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDw96EAanOKFuWqv1V-CcTEV4-t9Rp56Ys",
+  authDomain: "bohemia-bd91a.firebaseapp.com",
+  projectId: "bohemia-bd91a",
+  storageBucket: "bohemia-bd91a.firebasestorage.app",
+  messagingSenderId: "896733414838",
+  appId: "1:896733414838:web:493169d3b500ea49a3ad17",
+  measurementId: "G-KY3ZTQ08RL"
+};
+</script>
 <style>
 :root{
   --bg:#0B0F13; --bg2:#121A20; --card:#161F25; --card2:#1D282F; --line:#26333A;
