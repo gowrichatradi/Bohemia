@@ -470,6 +470,44 @@ function daylightWarning(d, idx) {
   </div>`;
 }
 
+/* ---------- checklist done-state (generic, localStorage-backed) ----------
+   scope: 'action' | 'pack' | 'kid' | 'verify' | any short string
+   key:   stable identifier — usually the item's text or name */
+function chkKey(scope, key) {
+  return "chk:" + scope + ":" + String(key).replace(/\s+/g, "_").slice(0, 200);
+}
+function isChkDone(scope, key) {
+  try { return localStorage.getItem(chkKey(scope, key)) === "1"; }
+  catch (_) { return false; }
+}
+function toggleChkDone(scope, key) {
+  const k = chkKey(scope, key);
+  try {
+    const on = localStorage.getItem(k) === "1";
+    if (on) localStorage.removeItem(k);
+    else localStorage.setItem(k, "1");
+    if (navigator.vibrate) navigator.vibrate(on ? 20 : [20, 30, 20]);
+  } catch (_) {}
+  render();
+}
+/* Encode text safely for use inside an onclick="..." attribute */
+function chkOnclick(scope, key) {
+  return `toggleChkDone(&quot;${scope}&quot;, &quot;${String(key).replace(/"/g, "&quot;").replace(/'/g, "&#39;")}&quot;)`;
+}
+/* Render an SVG checkbox (checked/unchecked) — used by all checklists */
+function chkBox(on) {
+  return on
+    ? '<svg class="chkbx on" viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="4"/><path d="M6 10.5l3 3 5-6" fill="none" stroke="#0B0F13" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg class="chkbx" viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="4" fill="none" stroke-width="1.5"/></svg>';
+}
+/* Progress counter — "N of M done" — shown above each checklist */
+function chkProgress(scope, keys) {
+  const done = keys.filter((k) => isChkDone(scope, k)).length;
+  const pct = keys.length ? Math.round((done / keys.length) * 100) : 0;
+  return `<div class="chk-progress"><div class="chk-p-lab"><b>${done}</b> of ${keys.length} done</div>
+    <div class="chk-p-bar"><div class="chk-p-fill" style="width:${pct}%"></div></div></div>`;
+}
+
 /* ---------- day-done state (long-press to toggle) ---------- */
 /* Keyed by date string so a day marked done stays done across reloads and
    across data changes. */
@@ -1232,14 +1270,19 @@ const TAG_CLASS = {
   Cancel: "t-act",
   Seats: "t-open",
 };
-function bookingRows(rows) {
+function bookingRows(rows, opts) {
+  const checkable = opts && opts.checkable;
   return rows
     .map((r) => {
       const tg = TAG_CLASS[r.tag] || "t-act";
       const addrBtn = r.addr
         ? `<button class="ref addr" onclick="copyAddr(${JSON.stringify(r.addr).replace(/"/g, "&quot;")})">${I.pin || I.copy}${esc(r.addr)}</button>`
         : "";
-      return `<div class="bk"><div class="w">${esc(r.when || "")
+      const done = checkable ? isChkDone(checkable, r.name) : false;
+      const chk = checkable
+        ? `<button class="chk-hit" onclick="${chkOnclick(checkable, r.name)}" aria-label="Toggle done">${chkBox(done)}</button>`
+        : "";
+      return `<div class="bk${done ? " chk-done" : ""}">${chk}<div class="w">${esc(r.when || "")
         .split("\n")
         .join("<br>")}</div>
       <div class="b"><div class="n">${esc(r.name)}</div>
@@ -1315,11 +1358,18 @@ function vBook() {
     // Auto-sync on Live tab open — throttled to once per minute per visit
     maybeAutoSync();
   } else {
-    h += `<p class="intro">Tap a reference to copy it.</p>`;
+    const isTodo = TABS[bk].name === "To do";
+    if (isTodo) {
+      const keys = (TABS[bk].groups[0] && TABS[bk].groups[0].rows || []).map((r) => r.name);
+      h += chkProgress("action", keys);
+      h += `<p class="intro">Tick off as you go — saved on this device.</p>`;
+    } else {
+      h += `<p class="intro">Tap a reference to copy it.</p>`;
+    }
     TABS[bk].groups.forEach((g) => {
       if (TABS[bk].groups.length > 1)
         h += `<div class="grph">${esc(g.head)}</div>`; // sub-headers only when >1 group
-      h += bookingRows(g.rows);
+      h += bookingRows(g.rows, isTodo ? { checkable: "action" } : undefined);
     });
   }
   return h + "</div>";
@@ -2219,8 +2269,8 @@ function vInfo() {
   if (S.seg === 4)
     h +=
       DATA.wearGroups && DATA.wearGroups.length
-        ? groupsHTML(DATA.wearGroups)
-        : listHTML(DATA.wear);
+        ? groupsHTMLCheckable(DATA.wearGroups, "pack")
+        : listHTML(DATA.wear, { checkable: "pack" });
   if (S.seg === 5) {
     // Kid-mode toggle sits at the top of the Child tab.
     const on = S.kidMode;
@@ -2236,7 +2286,7 @@ function vInfo() {
         ${on ? "✓ Kid mode on — tap to turn off" : "Turn kid mode on"}
       </button>
     </div>`;
-    h += listHTML(DATA.kid);
+    h += listHTML(DATA.kid, { checkable: "kid" });
   }
   // Force-refresh utility — sits at the bottom of every Guide tab.
   h += `<div class="card fade" style="margin-top:24px"><div class="lab">${I.warn}App cache</div>
@@ -2344,18 +2394,49 @@ function groupsHTML(groups) {
     )
     .join("");
 }
-function listHTML(sec) {
+function listHTML(sec, opts) {
   if (!sec) return "";
-  let h = sec.intro
-    ? `<p class="intro" style="margin-top:12px">${fmt(sec.intro)}</p>`
-    : "";
+  const checkable = opts && opts.checkable;
+  const keys = checkable ? (sec.items || []).filter((i) => i.k !== "h").map((i) => i.t) : [];
+  let h = "";
+  if (checkable && keys.length) h += chkProgress(checkable, keys);
+  if (sec.intro) h += `<p class="intro" style="margin-top:12px">${fmt(sec.intro)}</p>`;
   h += '<ul class="pl" style="margin-top:8px">';
   sec.items.forEach((it) => {
     if (it.k === "h") {
       h += `</ul><div class="grph">${esc(it.t)}</div><ul class="pl">`;
-    } else h += `<li>${fmt(it.t)}</li>`;
+    } else if (checkable) {
+      const done = isChkDone(checkable, it.t);
+      h += `<li class="chk-li${done ? " chk-done" : ""}">
+        <button class="chk-hit" onclick="${chkOnclick(checkable, it.t)}" aria-label="Toggle done">${chkBox(done)}</button>
+        <span class="chk-t">${fmt(it.t)}</span>
+      </li>`;
+    } else {
+      h += `<li>${fmt(it.t)}</li>`;
+    }
   });
   return h + "</ul>";
+}
+/* Extend groupsHTML the same way, so wearGroups (packing) gets checkboxes.
+   groupsHTML rows are objects with .name/.detail; we key by name. */
+function groupsHTMLCheckable(groups, scope) {
+  const allKeys = [];
+  groups.forEach((g) => g.rows.forEach((r) => allKeys.push(r.name)));
+  let h = chkProgress(scope, allKeys);
+  h += groups
+    .map((g) =>
+      `<div class="grph">${esc(g.head)}</div>` +
+      g.rows.map((r) => {
+        const done = isChkDone(scope, r.name);
+        return `<div class="bk${done ? " chk-done" : ""}">
+          <button class="chk-hit" onclick="${chkOnclick(scope, r.name)}" aria-label="Toggle done">${chkBox(done)}</button>
+          <div class="w">${esc(r.when || "").split("\n").join("<br>")}</div>
+          <div class="b"><div class="n">${esc(r.name)}</div>
+          <div class="d">${fmt(r.detail)}</div></div>
+        </div>`;
+      }).join("")
+    ).join("");
+  return h;
 }
 
 /* ---------- actions & motion ---------- */

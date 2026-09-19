@@ -503,6 +503,36 @@ button.chip:active{transform:scale(.95)}
 /* ===== booking rows ===== */
 .bk{display:flex;gap:12px;padding:13px 0;border-bottom:.5px solid var(--line);align-items:flex-start}
 .bk:last-child{border-bottom:0}
+
+/* ===== generic checklist checkboxes (actions, packing, kid, verify) ===== */
+.chk-hit{background:transparent;border:0;padding:6px;margin:-6px 0 -6px -6px;
+  cursor:pointer;flex:0 0 auto;line-height:0;color:var(--ink3);
+  transition:color .18s ease,transform .1s ease}
+.chk-hit:hover{color:var(--dawn)}
+.chk-hit:active{transform:scale(.9)}
+.chkbx{width:20px;height:20px;stroke:currentColor;fill:none;transition:all .18s ease}
+.chkbx.on{fill:var(--dawn);stroke:var(--dawn)}
+.chk-hit .chkbx.on{color:var(--dawn)}
+/* Applied to .bk / .chk-li when the item is done — dims + strikes through */
+.chk-done{opacity:.5}
+.chk-done .n,.chk-done .chk-t{text-decoration:line-through;
+  text-decoration-color:rgba(79,214,156,.55);text-decoration-thickness:1.4px}
+/* checklist <li> variant (packing / kid / verify) */
+ul.pl li.chk-li{display:flex;align-items:flex-start;gap:10px;list-style:none;
+  padding-left:0;margin-left:0;background:transparent}
+ul.pl li.chk-li::before{display:none}
+.chk-li .chk-t{flex:1;min-width:0;line-height:1.55}
+
+/* progress counter shown above a checklist */
+.chk-progress{margin:12px 0 4px;padding:12px 14px;border-radius:12px;
+  background:var(--card2);border:.5px solid var(--line)}
+.chk-p-lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink2);margin-bottom:8px}
+.chk-p-lab b{color:var(--dawn);font-size:14px;font-weight:600}
+.chk-p-bar{height:6px;border-radius:6px;background:rgba(255,255,255,.05);
+  overflow:hidden;border:.5px solid var(--line)}
+.chk-p-fill{height:100%;background:linear-gradient(90deg,var(--dawn),var(--fjord));
+  border-radius:6px;transition:width .4s var(--ease)}
 .bk .w{font-family:var(--mono);font-size:10.5px;color:var(--ink3);width:56px;flex:0 0 56px;line-height:1.4;padding-top:2px}
 .bk .b{flex:1;min-width:0}
 .bk .n{font-weight:600;font-size:15px;letter-spacing:-.015em}
