@@ -1282,11 +1282,15 @@ function bookingRows(rows, opts) {
       const chk = checkable
         ? `<button class="chk-hit" onclick="${chkOnclick(checkable, r.name)}" aria-label="Toggle done">${chkBox(done)}</button>`
         : "";
+      const bag = r.baggage
+        ? `<div class="bag-row"><span class="bag-lab">Baggage</span><span class="bag-val">${fmt(r.baggage)}</span></div>`
+        : "";
       return `<div class="bk${done ? " chk-done" : ""}">${chk}<div class="w">${esc(r.when || "")
         .split("\n")
         .join("<br>")}</div>
       <div class="b"><div class="n">${esc(r.name)}</div>
       ${r.detail ? `<div class="d">${fmt(r.detail)}</div>` : ""}
+      ${bag}
       ${r.ref ? `<button class="ref" onclick="copyRef('${esc(r.ref.split(" ")[0])}')">${I.copy}${esc(r.ref)}</button>` : ""}
       ${addrBtn}
       </div>${r.tag ? `<span class="tag ${tg}">${esc(r.tag)}</span>` : ""}</div>`;

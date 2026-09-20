@@ -553,6 +553,18 @@ ul.pl li.chk-li::before{display:none}
 .bk .b{flex:1;min-width:0}
 .bk .n{font-weight:600;font-size:15px;letter-spacing:-.015em}
 .bk .d{font-size:13.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
+/* Baggage allowance row on flight bookings — pill label + inline detail */
+.bag-row{display:flex;align-items:flex-start;gap:8px;margin-top:8px;
+  padding:8px 10px;border-radius:9px;
+  background:linear-gradient(160deg,rgba(107,182,206,.08),rgba(107,182,206,.02));
+  border:.5px solid rgba(107,182,206,.24)}
+.bag-lab{display:inline-flex;align-items:center;flex:0 0 auto;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--fjord);font-weight:600;padding:2px 8px;border-radius:999px;
+  background:rgba(107,182,206,.15);border:.5px solid rgba(107,182,206,.36);
+  line-height:1.5}
+.bag-val{flex:1;font-size:12.5px;line-height:1.5;color:var(--ink2)}
+.bag-val strong{color:var(--ink);font-weight:600}
 .ref{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;
   color:var(--fjord);background:rgba(107,182,206,.1);padding:5px 10px;border-radius:8px;margin-top:8px;
   margin-right:6px;text-align:left;max-width:100%}
