@@ -1459,9 +1459,11 @@ function vBudget() {
       </div>`;
     });
     const parts = [];
+    if (ct.committed !== ct.net) parts.push(`committed ${fmtMoney(ct.committed, ccy)}`);
     if (ct.refunded < 0) parts.push(`<span class="bg-sub-rf">refunded ${fmtMoney(ct.refunded, ccy)}</span>`);
     if (ct.cb) parts.push(`<span class="bg-sub-cb">− ${ccy}${Math.round(ct.cb).toLocaleString("en-AU")} back</span>`);
-    h += `<div class="bg-sub"><span>Subtotal${parts.length ? " · " + parts.join(" · ") : ""}</span><b>${fmtMoney(ct.net, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
+    const netAfterCb = ct.net - ct.cb;
+    h += `<div class="bg-sub bg-sub-net"><span>${esc(c.head)} net${parts.length ? " · " + parts.join(" · ") : ""}</span><b>${fmtMoney(netAfterCb, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
     h += `</div>`;
   });
 
