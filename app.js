@@ -1385,93 +1385,93 @@ function fmtMoney(n, ccy) {
   const abs = Math.abs(Math.round(n));
   return `<span class="bg-n">${sign}${ccy || "$"}${abs.toLocaleString("en-AU")}</span>`;
 }
-/* Shared totals — reused by vBudget and the Live vs-plan comparison. */
+/* Shared totals — reused by vBudget and the Live reconciliation view.
+   Schema: each row has { committed, refunded, net, cashbackRate?, program? }. */
 function computeBudgetTotals() {
   const B = DATA.budget || { currency: "AUD", categories: [] };
-  let grand = 0, unknown = 0, cashback = 0, pending = 0;
+  let committed = 0, refunded = 0, net = 0, cashback = 0;
   const catTotals = [];
+  const programs = {};
   B.categories.forEach((c) => {
-    if (c.head === "Contingency") return;
-    let sub = 0, qs = 0, cb = 0, ps = 0;
+    let sub = { committed: 0, refunded: 0, net: 0, cb: 0 };
     c.rows.forEach((r) => {
-      if (typeof r.cash === "number") {
-        sub += r.cash;
-        if (typeof r.cashback === "number") cb += r.cash * r.cashback;
-      } else if (r.cash === null) qs += 1;
-      if (typeof r.pendingSaving === "number") ps += r.pendingSaving;
+      const rc = +r.committed || 0;
+      const rr = +r.refunded || 0;
+      const rn = +r.net || 0;
+      sub.committed += rc;
+      sub.refunded += rr;
+      sub.net += rn;
+      if (r.cashbackRate && rn > 0) {
+        const cb = rn * r.cashbackRate;
+        sub.cb += cb;
+        if (r.program) programs[r.program] = (programs[r.program] || 0) + cb;
+      }
     });
-    catTotals.push({ head: c.head, sub, qs, cb, ps });
-    grand += sub; unknown += qs; cashback += cb; pending += ps;
+    catTotals.push({ head: c.head, ...sub });
+    committed += sub.committed;
+    refunded += sub.refunded;
+    net += sub.net;
+    cashback += sub.cb;
   });
   cashback = Math.round(cashback);
-  const contingency = Math.round(grand * 0.1);
-  const netAfterCashback = grand - cashback - pending;
-  return { B, grand, unknown, cashback, pending, contingency, netAfterCashback, catTotals };
+  const netAfterCashback = net - cashback;
+  return { B, committed, refunded, net, cashback, netAfterCashback, catTotals, programs };
 }
 
 function vBudget() {
-  const { B, grand, unknown, cashback, pending, contingency, catTotals } = computeBudgetTotals();
+  const { B, committed, refunded, net, cashback, netAfterCashback, catTotals, programs } = computeBudgetTotals();
   const ccy = "$";
 
-  // Glance card at the top: committed, cashback earning, pending savings, net.
+  // Glance card: committed, refunded, net, cashback, net after cashback.
   let h = `<div class="bg-glance">
-    <div class="bg-g-row"><span>Committed so far</span><b>${fmtMoney(grand, ccy)}</b></div>
-    <div class="bg-g-row bg-g-cb"><span>Cashback earning</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
-    ${pending ? `<div class="bg-g-row bg-g-ps"><span>Pending savings · Super Cover decline</span><b class="bg-ps-total">−${fmtMoney(pending, ccy).replace('bg-n', 'bg-n bg-ps-num')}</b></div>` : ""}
-    <div class="bg-g-row bg-g-net"><span>Net after cashback${pending ? " + savings" : ""}</span><b>${fmtMoney(grand - cashback - pending, ccy)}</b></div>
+    <div class="bg-g-row"><span>Committed</span><b>${fmtMoney(committed, ccy)}</b></div>
+    <div class="bg-g-row bg-g-rf"><span>Refunded</span><b class="bg-rf-num">${fmtMoney(refunded, ccy)}</b></div>
+    <div class="bg-g-row"><span>Net cost</span><b>${fmtMoney(net, ccy)}</b></div>
+    <div class="bg-g-row bg-g-cb"><span>Cashback earned</span><b class="bg-cb-total">−${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-cb-num')}</b></div>
+    <div class="bg-g-row bg-g-net"><span>Net after cashback</span><b>${fmtMoney(netAfterCashback, ccy)}</b></div>
   </div>`;
   h += `<p class="intro">${esc(B.note || "")}</p>`;
 
   B.categories.forEach((c) => {
     const ct = catTotals.find((x) => x.head === c.head);
-    const isContingency = c.head === "Contingency";
     h += `<div class="bg-cat"><div class="bg-h">${esc(c.head)}</div>`;
     if (c.note) h += `<div class="bg-note">${fmt(c.note)}</div>`;
     c.rows.forEach((r) => {
-      const cash =
-        r.cash === "auto"
-          ? fmtMoney(contingency, ccy)
-          : fmtMoney(r.cash, ccy);
-      const cbAmt =
-        typeof r.cash === "number" && typeof r.cashback === "number"
-          ? Math.round(r.cash * r.cashback)
-          : 0;
+      const cbAmt = r.cashbackRate && +r.net > 0 ? Math.round(r.net * r.cashbackRate) : 0;
       const cbBadge = cbAmt
-        ? `<span class="bg-cb">${Math.round(r.cashback * 100)}% back · ${ccy}${cbAmt.toLocaleString("en-AU")}</span>`
+        ? `<span class="bg-cb">${Math.round(r.cashbackRate * 100)}%${r.program ? ` ${esc(r.program)}` : ""} · ${ccy}${cbAmt.toLocaleString("en-AU")}</span>`
         : "";
-      const psBadge =
-        typeof r.pendingSaving === "number" && r.pendingSaving > 0
-          ? `<span class="bg-ps">Save ${ccy}${r.pendingSaving.toLocaleString("en-AU")} · decline Super Cover at desk</span>`
-          : "";
-      h += `<div class="bg-row">
+      const rfBadge = (+r.refunded) < 0
+        ? `<span class="bg-rf">${fmtMoney(r.refunded, ccy)}</span>`
+        : "";
+      h += `<div class="bg-row ${(+r.net) === 0 && (+r.refunded) < 0 ? "bg-row-cancelled" : ""}">
         <div class="bg-l">
           <div class="bg-nm">${esc(r.name || "")}</div>
           ${r.detail ? `<div class="bg-d">${fmt(r.detail)}</div>` : ""}
           <div class="bg-meta">
             ${r.when ? `<span class="bg-w">${esc(r.when)}</span>` : ""}
             ${r.ref ? `<button class="ref bg-ref" onclick="copyRef('${esc(String(r.ref).split(" ")[0])}')">${I.copy}${esc(r.ref)}</button>` : ""}
-            ${r.tag ? `<span class="tag t-open">${esc(r.tag)}</span>` : ""}
+            ${rfBadge}
             ${cbBadge}
-            ${psBadge}
           </div>
         </div>
-        <div class="bg-r">${cash}</div>
+        <div class="bg-r">${fmtMoney(r.net, ccy)}</div>
       </div>`;
     });
-    if (!isContingency) {
-      const cbLine = ct.cb
-        ? ` <span class="bg-sub-cb">− ${ccy}${Math.round(ct.cb).toLocaleString("en-AU")} back</span>`
-        : "";
-      const psLine = ct.ps
-        ? ` <span class="bg-sub-ps">− ${ccy}${ct.ps.toLocaleString("en-AU")} pending</span>`
-        : "";
-      h += `<div class="bg-sub"><span>Subtotal${ct.qs ? ` · ${ct.qs} unknown` : ""}${cbLine}${psLine}</span><b>${fmtMoney(ct.sub, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
-    }
+    const parts = [];
+    if (ct.refunded < 0) parts.push(`<span class="bg-sub-rf">refunded ${fmtMoney(ct.refunded, ccy)}</span>`);
+    if (ct.cb) parts.push(`<span class="bg-sub-cb">− ${ccy}${Math.round(ct.cb).toLocaleString("en-AU")} back</span>`);
+    h += `<div class="bg-sub"><span>Subtotal${parts.length ? " · " + parts.join(" · ") : ""}</span><b>${fmtMoney(ct.net, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div>`;
     h += `</div>`;
   });
 
-  if (unknown) {
-    h += `<div class="bg-total"><div class="bg-note">${unknown} ${unknown === 1 ? "line is" : "lines are"} marked ? — fill in from a receipt and the glance-card totals update.</div></div>`;
+  const progKeys = Object.keys(programs);
+  if (progKeys.length) {
+    h += `<div class="bg-cat"><div class="bg-h">Cashback by program</div>`;
+    progKeys.forEach((k) => {
+      h += `<div class="bg-row"><div class="bg-l"><div class="bg-nm">${esc(k)}</div></div><div class="bg-r">${fmtMoney(programs[k], ccy)}</div></div>`;
+    });
+    h += `<div class="bg-sub"><span>Total cashback</span><b>${fmtMoney(cashback, ccy).replace('bg-n', 'bg-n bg-strong')}</b></div></div>`;
   }
   return h;
 }
@@ -1755,11 +1755,11 @@ function vLive() {
     return h;
   }
 
-  // Sub-view segmented control (By category · By day · Vs plan)
+  // Sub-view segmented control (By category · By day · Trip total)
   const modes = [
     ["cat", "By category"],
     ["day", "By day"],
-    ["plan", "Vs plan"],
+    ["plan", "Trip total"],
   ];
   h += `<div class="lv-seg">` +
     modes.map(([id, label]) =>
@@ -1784,18 +1784,14 @@ function vLive() {
     ).join("");
     h += `</div>`;
   } else {
-    // Vs plan — pull totals from DATA.budget and compare
-    const { grand: planned, netAfterCashback } = computeBudgetTotals();
-    const pct = planned ? Math.round((grandAUD / netAfterCashback) * 100) : 0;
-    const remaining = netAfterCashback - grandAUD;
-    const overBar = pct > 100;
-    h += `<div class="lv-g-row"><span>Planned (net after cashback)</span><b>$${Math.round(netAfterCashback).toLocaleString("en-AU")}</b></div>
-      <div class="lv-g-row"><span>Committed already</span><b>$${Math.round(planned).toLocaleString("en-AU")}</b></div>
-      <div class="lv-g-row"><span>${remaining >= 0 ? "Left on the plan" : "Over the plan"}</span>
-        <b class="${remaining < 0 ? "lv-over" : ""}">${remaining >= 0 ? "" : "−"}$${Math.abs(Math.round(remaining)).toLocaleString("en-AU")}</b></div>
+    // Trip ledger — bookings (from DATA.budget) plus live on-the-ground spend
+    const { net: bookedNet, cashback, netAfterCashback } = computeBudgetTotals();
+    const totalNet = netAfterCashback + grandAUD;
+    h += `<div class="lv-g-row"><span>Bookings (net after cashback)</span><b>$${Math.round(netAfterCashback).toLocaleString("en-AU")}</b></div>
+      <div class="lv-g-row"><span>Live on-the-ground</span><b>$${Math.round(grandAUD).toLocaleString("en-AU")}</b></div>
+      <div class="lv-g-row lv-g-net"><span>Trip total</span><b>$${Math.round(totalNet).toLocaleString("en-AU")}</b></div>
     </div>
-    <div class="lv-bar"><div class="lv-bar-fill ${overBar ? "over" : ""}" style="width:${Math.min(pct, 100)}%"></div></div>
-    <div class="lv-bar-lab">${pct}% of the planned budget spent live · commitments already booked are separate</div>`;
+    <div class="lv-bar-lab">Bookings reconciled from receipts · live spend is the on-the-ground tally (food, fuel, tolls, parking, groceries, attractions)</div>`;
   }
 
   // Item list — full detail regardless of segment

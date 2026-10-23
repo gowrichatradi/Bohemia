@@ -628,6 +628,15 @@ ul.pl li.chk-li::before{display:none}
 .bg-ps-total{font-weight:600}
 .bg-sub-ps{color:#c58a2d;font-family:var(--mono);font-size:11px;margin-left:4px}
 .bg-glance .bg-g-ps b{color:#c58a2d}
+/* refunded — red, cancelled rows faded */
+.bg-rf{font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+  color:#b45a4b;background:rgba(180,90,75,.12);border:.5px solid rgba(180,90,75,.32);
+  border-radius:999px;padding:2px 8px}
+.bg-rf-num{color:#b45a4b !important}
+.bg-sub-rf{color:#b45a4b;font-family:var(--mono);font-size:11px;margin-left:4px}
+.bg-glance .bg-g-rf b{color:#b45a4b}
+.bg-row-cancelled{opacity:.55}
+.bg-row-cancelled .bg-nm{text-decoration:line-through}
 
 /* ===== live spend log ===== */
 .lv-form{background:linear-gradient(160deg,var(--card2) 0%,var(--card) 100%);
